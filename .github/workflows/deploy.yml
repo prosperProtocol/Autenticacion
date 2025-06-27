@@ -1,0 +1,76 @@
+name: Pipeline test
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Check out repository
+      uses: actions/checkout@v3
+
+    - name: Install SSH Client
+      run: sudo apt-get install openssh-client -y
+
+    - name: Configure SSH Key
+      run: |
+        mkdir -p ~/.ssh
+        echo "-----BEGIN OPENSSH PRIVATE KEY-----
+        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
+        -----END OPENSSH PRIVATE KEY-----" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+
+    - name: Deploy to EC2 - ProsperBackend
+      run: |
+        ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no node@52.11.193.89 << 'EOF'
+          cd /usr/local/src/Stellar/backend
+          git checkout .
+          git pull origin main
+          rm -rf .env
+          cp /usr/local/src/Stellar/.env /usr/local/src/Stellar/backend
+          nvm use 22.14.0
+          npm i
+          npm i --force
+          npm install @stellar/stellar-sdk
+          pm2 restart ProsperBack
+        EOF
+      shell: bash

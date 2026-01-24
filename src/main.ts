@@ -14,11 +14,6 @@ import * as express from 'express';
 import { writeFileSync } from 'fs';
 import * as YAML from 'yaml';
 
-import { InternalModule } from 'src/internal/internal.module';
-import { AuthModule } from 'src/modules/auth/auth.module';
-import { BackOfficeModule } from 'src/modules/backoffice/backoffice.module';
-import { KycModule } from 'src/modules/kyc/kyc.module';
-import { TransferModule } from 'src/modules/transfer/transfer.module';
 import { AppModule } from 'src/app.module';
 
 async function bootstrap() {
@@ -34,9 +29,8 @@ async function bootstrap() {
     ? ['error', 'warn', 'debug', 'verbose']
     : ['log', 'error', 'warn', 'debug', 'verbose'];
   const swaggerModules = isLocal
-    ? [AppModule, AuthModule, KycModule, InternalModule, TransferModule]
-    : [AppModule, AuthModule, KycModule, TransferModule];
-
+    ? [AppModule]
+    : [AppModule];
   app.useLogger(logLevels);
 
   if (isLocal) {
@@ -84,7 +78,7 @@ const backofficeSwaggerConfig = new DocumentBuilder()
   .build();
 
 const backofficeSwaggerDoc = SwaggerModule.createDocument(app, backofficeSwaggerConfig, {
-  include: [BackOfficeModule],
+  include: [AppModule],
 });
 
 SwaggerModule.setup(backofficeSwaggerApi, app, backofficeSwaggerDoc, {

@@ -85,9 +85,10 @@ export class StellarService {
       : this.stellarConfig.prosper_issuer_address_prod;
 
     if (!issuer) {
-      throw new NotFoundException(
+      this.logger.warn(
         `PROSPER issuer address not defined for ${isTestnet ? 'testnet' : 'mainnet'}`,
       );
+      return;
     }
     return Keypair.fromSecret(issuer);
   }

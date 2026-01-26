@@ -12,28 +12,28 @@ import {
 import { Wallets } from './wallets';
 
 export enum TransferStatus {
-  PENDIENTE = 'Pendiente',
-  RECHAZADA = 'Rechazada',
-  COMPLETADA = 'Completada',
+  Pendiente = 'Pendiente',
+  Rechazada = 'Rechazada',
+  Completada = 'Completada',
 }
 
 export enum WebhookStatus {
-  PENDIENTE = 'Pendiente',
-  RECIBIDO = 'Recibido',
-  RECHAZADO = 'Rechazado',
+  Pendiente = 'Pendiente',
+  Recibido = 'Recibido',
+  Rechazado = 'Rechazado',
 }
 
 export enum FundsStatus {
-  BALANCE_STAKING = 'balanceStaking',
-  BALANCE_TOKEN = 'balanceToken',
+  BalanceStaking = 'BalanceStaking',
+  BalanceToken = 'BalanceToken',
 }
 
 export enum TxType {
-  MINT = 'Mint',
-  DEPOSITO = 'Depósito',
-  RETIRO = 'Retiro',
-  TRANSFERENCIA = 'Transferencia',
-  STAKING = 'Staking',
+  Mint = 'Mint',
+  Depósito = 'Depósito',
+  Retiro = 'Retiro',
+  Transferencia = 'Transferencia',
+  Staking = 'Staking',
 }
 
 @Entity()
@@ -60,7 +60,7 @@ export class Transacciones {
     type: 'enum',
     enum: TransferStatus,
     nullable: false,
-    default: TransferStatus.PENDIENTE,
+    default: TransferStatus.Pendiente,
   })
   status: TransferStatus;
 
@@ -74,7 +74,7 @@ export class Transacciones {
     type: 'enum',
     enum: WebhookStatus,
     nullable: false,
-    default: WebhookStatus.PENDIENTE,
+    default: WebhookStatus.Pendiente,
   })
   webhookStatus: WebhookStatus;
 

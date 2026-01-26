@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsBoolean,
   IsNotEmpty,
@@ -42,10 +42,6 @@ export class CreateFundResponse {
   @IsOptional()
   @IsString()
   secretKey?: string;
-
-  @ApiProperty()
-  @IsBoolean()
-  alreadyConfigured: boolean;
 
   @ApiProperty({ required: false })
   @IsOptional()
@@ -123,14 +119,14 @@ export class DepositDto {
   @IsNotEmpty()
   amount: string;
 
-  @ApiProperty()
+  @ApiPropertyOptional({ description: 'Identificador de referencia del usuario en el sistema externo, OPCIONAL' })
   @IsString()
   @IsOptional()
   userReferenceId?: string;
 
   @ApiProperty({
     required: false,
-    description: 'Dirección de la wallet del usuario',
+    description: 'Dirección de la wallet del usuario, valor interno del protocolo, OPCIONAL',
   })
   @IsString()
   @IsOptional()

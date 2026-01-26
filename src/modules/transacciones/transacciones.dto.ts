@@ -179,9 +179,9 @@ export class GetTransactionsDto extends PaginationRequestDto {
   @ApiPropertyOptional({
     description:
       'Estado de la transacción, ' +
-      `ejemplo: ${TransferStatus.PENDIENTE}, ` +
-      `${TransferStatus.COMPLETADA}, ` +
-      `${TransferStatus.RECHAZADA}`,
+      `ejemplo: ${TransferStatus.Pendiente}, ` +
+      `${TransferStatus.Completada}, ` +
+      `${TransferStatus.Rechazada}`,
   })
   @IsOptional()
   @IsString()
@@ -191,11 +191,11 @@ export class GetTransactionsDto extends PaginationRequestDto {
     description:
       'Tipo de transacción' +
       `ejemplo: ` +
-      `${TxType.MINT}, ` +
-      `${TxType.DEPOSITO}, ` +
-      `${TxType.RETIRO}, ` +
-      `${TxType.TRANSFERENCIA}, ` +
-      `${TxType.STAKING}`,
+      `${TxType.Mint}, ` +
+      `${TxType.Depósito}, ` +
+      `${TxType.Retiro}, ` +
+      `${TxType.Transferencia}, ` +
+      `${TxType.Staking}`,
   })
   @IsOptional()
   @IsString()

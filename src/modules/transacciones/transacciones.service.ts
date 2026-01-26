@@ -46,12 +46,10 @@ export class TransaccionesService {
         from: dto.from,
         to: dto.to,
         memo: dto.memo,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        status: (TransferStatus as any).PENDING,
+        status: TransferStatus[dto.status],
         txType: dto.txType,
         txHash: dto?.txHash ?? null,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        webhookStatus: (WebhookStatus as any).PENDING,
+        webhookStatus: WebhookStatus[dto.webhookStatus ?? WebhookStatus.Pendiente],
         walletFrom,
         walletTo,
       });

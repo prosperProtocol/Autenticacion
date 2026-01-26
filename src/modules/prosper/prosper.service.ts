@@ -70,7 +70,7 @@ export class ProsperService {
         `Error en checkUser: `,
         error instanceof Error ? error.message : String(error),
       );
-      throw new BadRequestException('Error verificando la wallet del usuario');
+      throw new BadRequestException('Error verificando la wallet del usuario', error instanceof Error ? error.message : String(error));
     }
   }
 
@@ -90,7 +90,29 @@ export class ProsperService {
         `Error en checkUserAddress: `,
         error instanceof Error ? error.message : String(error),
       );
-      throw new BadRequestException('Error verificando la wallet por address');
+      throw new BadRequestException('Error verificando la wallet por address', error instanceof Error ? error.message : String(error));
+    }
+  }
+
+  public async makeTreasury() {
+    this.logger.debug('makeTreasury called');
+    try {
+      const isTestnet = await this.stellarService.getIsTestnet();
+      const newTreasury =
+        await this.stellarService.createProsperTreasury(isTestnet);
+      const treasury = Keypair.fromSecret(newTreasury.secretKey);
+      const newWallet = await this.walletsService.create({
+        prosperId: 'treasury',
+        address: treasury.publicKey(),
+        secret: 'N/A',
+      });
+      return { secret: newTreasury.secretKey, walletId: newWallet.id };
+    } catch (error) {
+      this.logger.error(
+        `Error en makeTreasury: `,
+        error instanceof Error ? error.message : String(error),
+      );
+      throw new BadRequestException('Error creando la treasury de Prosper', error instanceof Error ? error.message : String(error));
     }
   }
 
@@ -105,66 +127,31 @@ export class ProsperService {
       let issuer = this.stellarService.getProsperIssuer(isTestnet);
       let response: CreateFundResponse;
       try {
-        if (!issuer) {
-          issuer = Keypair.random();
-          await this.stellarService.createAccountWithBalance(issuer, isTestnet);
-          if (homeDomain) {
-            await this.stellarService.addHomeDomainToIssuer(
-              issuer.secret(),
-              homeDomain,
-              isTestnet,
-            );
-          }
-          if (isTestnet) {
-            this.logger.debug(
-              `New PROSPER issuer created: ${issuer.publicKey()}, ` +
-                `secret: ${issuer.secret()}`,
-            );
-          }
-          response = {
-            publicKey: issuer.publicKey(),
-            secretKey: issuer.secret(),
-            alreadyConfigured: true,
-            homeDomain,
-          };
-        } else {
-          const account = await this.stellarService
-            .getServer(isTestnet)
-            .loadAccount(issuer.publicKey());
-          if (!account) {
-            throw new BadRequestException(
-              'Error PROSPER issuer account does not exist on Stellar network',
-            );
-          }
-          if (homeDomain && account.home_domain !== homeDomain) {
-            await this.stellarService.addHomeDomainToIssuer(
-              issuer.secret(),
-              homeDomain,
-              isTestnet,
-            );
-          }
-          response = {
-            publicKey: issuer.publicKey(),
-            secretKey: undefined,
-            alreadyConfigured: true,
-            homeDomain: account.home_domain,
-          };
+        const account = await this.stellarService
+          .getServer(isTestnet)
+          .loadAccount(issuer.publicKey());
+        if (!account) {
+          throw new BadRequestException(
+            'Error PROSPER issuer account does not exist on Stellar network',
+          );
         }
+        if (homeDomain && account.home_domain !== homeDomain) {
+          await this.stellarService.addHomeDomainToIssuer(
+            issuer.secret(),
+            homeDomain,
+            isTestnet,
+          );
+        }
+        response = {
+          publicKey: issuer.publicKey(),
+          secretKey: undefined,
+          homeDomain: account.home_domain,
+        };
         const [fromWallet] = await this.walletsService.findByFields({
           address: issuer.publicKey(),
         });
         if (initialAmount && Number(initialAmount) > 0) {
-          let treasury = this.stellarService.getProsperTeasury(isTestnet);
-          if (!treasury) {
-            const newTreasury =
-              await this.stellarService.createProsperTreasury(isTestnet);
-            treasury = Keypair.fromSecret(newTreasury.secretKey);
-            await this.walletsService.create({
-              prosperId: prosperTxId,
-              address: issuer.publicKey(),
-              secret: 'N/A',
-            });
-          }
+          const treasury = this.stellarService.getProsperTeasury(isTestnet);
           const asset = this.stellarService.getProsperAsset(isTestnet).code;
           const [newWallet] = await this.walletsService.findByFields({
             address: treasury.publicKey(),
@@ -191,11 +178,11 @@ export class ProsperService {
           data.to = treasury.publicKey();
           data.memo = prosperTxId;
           data.status = tx.successful
-            ? TransferStatus.COMPLETADA
-            : TransferStatus.PENDIENTE;
-          data.txType = TxType.MINT;
+            ? TransferStatus.Completada
+            : TransferStatus.Pendiente;
+          data.txType = TxType.Mint;
           data.txHash = tx.successful ? tx.txHash : null;
-          data.webhookStatus = WebhookStatus.PENDIENTE;
+          data.webhookStatus = WebhookStatus.Pendiente;
           data.walletFromId = fromWallet.id;
           data.walletToId = newWallet.id;
           await this.transaccionesService.create(data);
@@ -210,7 +197,10 @@ export class ProsperService {
         `Error en createFund: `,
         error instanceof Error ? error.message : String(error),
       );
-      throw new BadRequestException('Error creando el fondo Prosper');
+      throw new BadRequestException(
+        'Error creando el fondo Prosper',
+        error instanceof Error ? error.message : String(error),
+      );
     }
   }
 
@@ -258,11 +248,11 @@ export class ProsperService {
         data.to = treasury.publicKey();
         data.memo = prosperTxId;
         data.status = tx.successful
-          ? TransferStatus.COMPLETADA
-          : TransferStatus.PENDIENTE;
-        data.txType = TxType.MINT;
+          ? TransferStatus.Completada
+          : TransferStatus.Pendiente;
+        data.txType = TxType.Mint;
         data.txHash = tx.successful ? tx.txHash : null;
-        data.webhookStatus = WebhookStatus.PENDIENTE;
+        data.webhookStatus = WebhookStatus.Pendiente;
         data.walletFromId = toWallet.id;
         data.walletToId = fromWallet.id;
         if (reason) {
@@ -279,7 +269,10 @@ export class ProsperService {
         `Error en mintTokens: `,
         error instanceof Error ? error.message : String(error),
       );
-      throw new BadRequestException('Error minting Prosper tokens');
+      throw new BadRequestException(
+        'Error minting Prosper tokens',
+        error instanceof Error ? error.message : String(error),
+      );
     }
   }
 
@@ -369,6 +362,7 @@ export class ProsperService {
       );
       throw new BadRequestException(
         'Error creando o verificando la wallet del usuario',
+        error instanceof Error ? error.message : String(error),
       );
     }
   }
@@ -418,11 +412,11 @@ export class ProsperService {
       data.to = user.address;
       data.memo = prosperTxId;
       data.status = tx.successful
-        ? TransferStatus.COMPLETADA
-        : TransferStatus.PENDIENTE;
-      data.txType = TxType.DEPOSITO;
+        ? TransferStatus.Completada
+        : TransferStatus.Pendiente;
+      data.txType = TxType.Depósito;
       data.txHash = tx.successful ? tx.txHash : null;
-      data.webhookStatus = WebhookStatus.PENDIENTE;
+      data.webhookStatus = WebhookStatus.Pendiente;
       data.walletFromId = fromWallet.id;
       data.walletToId = toWallet.id;
       await this.transaccionesService.create(data);
@@ -432,7 +426,10 @@ export class ProsperService {
         `Error en deposit: `,
         error instanceof Error ? error.message : String(error),
       );
-      throw new BadRequestException('Error procesando depósito');
+      throw new BadRequestException(
+        'Error procesando depósito',
+        error instanceof Error ? error.message : String(error),
+      );
     }
   }
 
@@ -487,11 +484,11 @@ export class ProsperService {
       data.to = teasureKey.publicKey();
       data.memo = prosperTxId;
       data.status = tx.successful
-        ? TransferStatus.COMPLETADA
-        : TransferStatus.PENDIENTE;
-      data.txType = TxType.RETIRO;
+        ? TransferStatus.Completada
+        : TransferStatus.Pendiente;
+      data.txType = TxType.Retiro;
       data.txHash = tx.successful ? tx.txHash : null;
-      data.webhookStatus = WebhookStatus.PENDIENTE;
+      data.webhookStatus = WebhookStatus.Pendiente;
       data.walletFromId = fromWallet.id;
       data.walletToId = toWallet.id;
       await this.transaccionesService.create(data);
@@ -545,11 +542,11 @@ export class ProsperService {
       data.to = toUser.address;
       data.memo = prosperTxId;
       data.status = tx.successful
-        ? TransferStatus.COMPLETADA
-        : TransferStatus.PENDIENTE;
-      data.txType = TxType.TRANSFERENCIA;
+        ? TransferStatus.Completada
+        : TransferStatus.Pendiente;
+      data.txType = TxType.Transferencia;
       data.txHash = tx.successful ? tx.txHash : null;
-      data.webhookStatus = WebhookStatus.PENDIENTE;
+      data.webhookStatus = WebhookStatus.Pendiente;
       data.walletFromId = fromWallet.id;
       data.walletToId = toWallet.id;
       if (metadata) {
@@ -562,7 +559,10 @@ export class ProsperService {
         `Error en transfer: `,
         error instanceof Error ? error.message : String(error),
       );
-      throw new BadRequestException('Error procesando transferencia');
+      throw new BadRequestException(
+        'Error procesando transferencia',
+        error instanceof Error ? error.message : String(error),
+      );
     }
   }
 
@@ -578,7 +578,10 @@ export class ProsperService {
         `Error en getBalance: `,
         error instanceof Error ? error.message : String(error),
       );
-      throw new BadRequestException('Error obteniendo balance');
+      throw new BadRequestException(
+        'Error obteniendo balance',
+        error instanceof Error ? error.message : String(error),
+      );
     }
   }
 
@@ -595,6 +598,7 @@ export class ProsperService {
       );
       throw new BadRequestException(
         'Error obteniendo transacciones del usuario',
+        error instanceof Error ? error.message : String(error),
       );
     }
   }

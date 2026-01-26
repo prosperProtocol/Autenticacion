@@ -17,6 +17,11 @@ import { GetTransactionsDto } from '../transacciones/transacciones.dto';
 export class ProsperController {
   constructor(private readonly service: ProsperService) {}
 
+  // @Post('makeTreasury')
+  // async makeTreasury() {
+  //   return this.service.makeTreasury();
+  // }
+
   @Post('funds')
   async createFund(@Body() payload: CreateFundDto) {
     return this.service.createFund(payload);

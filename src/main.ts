@@ -61,6 +61,8 @@ async function bootstrap() {
   const externalDoc = SwaggerModule.createDocument(app, externalOptions, {
     include: [AuthModule, ProsperModule],
   });
+    const yamlDataInt = yaml.dump(externalDoc);
+    fs.writeFileSync('./documentacion.yaml', yamlDataInt);
 
   const swaggerApi = 'api/docs';
   const theme = new SwaggerTheme();

@@ -102,7 +102,7 @@ export class TransaccionesService {
     this.logger.debug('llamando findByFields');
     try {
       const {
-        userId,
+        prosperId,
         limit = 10,
         page = 1,
         createdAt,
@@ -112,11 +112,11 @@ export class TransaccionesService {
       const offset = (page - 1) * limit;
       // buscar wallet por prosperId
       const wallets = await this.walletsRepo.find({
-        where: { prosperId: userId },
+        where: { prosperId: prosperId },
       });
       const wallet = wallets && wallets.length ? wallets[0] : null;
       if (!wallet)
-        throw new NotFoundException(`Wallet for userId ${userId} not found`);
+        throw new NotFoundException(`Wallet for prosperId ${prosperId} not found`);
       // Construir cláusula WHERE y parámetros
       const whereClauses: string[] = [
         '(t."walletFromId" = $1 OR t."walletToId" = $1)',

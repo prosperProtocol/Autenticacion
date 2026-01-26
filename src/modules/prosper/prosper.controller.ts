@@ -52,17 +52,17 @@ export class ProsperController {
     return this.service.retire(payload);
   }
 
-  @Get('users/:userId/balances')
-  async userBalances(@Param('userId') userId: string) {
-    return this.service.getBalance(userId);
+  @Get('users/:prosperId/balances')
+  async userBalances(@Param('prosperId') prosperId: string) {
+    return this.service.getBalance(prosperId);
   }
 
-  @Get('users/:userId/transactions')
+  @Get('users/:prosperId/transactions')
   async userTransactions(
-    @Param('userId') userId: string,
+    @Param('prosperId') prosperId: string,
     @Body() payload: GetTransactionsDto,
   ) {
-    payload.userId = userId;
+    payload.prosperId = prosperId;
     return this.service.getTransactions(payload);
   }
 }

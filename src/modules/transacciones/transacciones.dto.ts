@@ -168,14 +168,22 @@ export class GetTransactionsDto extends PaginationRequestDto {
   @ApiProperty({ description: 'User id (prosperId) que filtra transacciones' })
   @IsString()
   @IsNotEmpty()
-  userId: string;
+  prosperId: string;
 
-  @ApiProperty({ required: false, description: 'Fecha de creación (ISO)' })
+  @ApiProperty({
+    required: false,
+    description: 'Fecha de creación (ISO)',
+    example: '2024-01-01',
+  })
   @IsOptional()
-  @IsDateString()
+  @IsString()
   createdAt?: string;
 
-  @ApiProperty({ required: false, description: 'Estado de la transacción' })
+  @ApiProperty({
+    required: false,
+    description: 'Estado de la transacción',
+    example: `${TransferStatus.PENDIENTE}, ${TransferStatus.COMPLETADA}, ${TransferStatus.RECHAZADA}`,
+  })
   @IsOptional()
   @IsString()
   status?: string;

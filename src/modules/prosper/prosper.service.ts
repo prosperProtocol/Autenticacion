@@ -43,16 +43,16 @@ export class ProsperService {
     private readonly walletsService: WalletsService,
   ) {}
 
-  private async checkUser(userId: string): Promise<CheckUserResponse> {
+  private async checkUser(prosperId: string): Promise<CheckUserResponse> {
     this.logger.debug('llamando checkUser');
     try {
       const wallets = await this.walletsService.findByFields({
-        prosperId: userId,
+        prosperId: prosperId,
       });
       const wallet = wallets && wallets.length ? wallets[0] : null;
       if (!wallet)
         throw new NotFoundException(
-          `Wallet para userId ${userId} no encontrada`,
+          `Wallet para prosperId ${prosperId} no encontrada`,
         );
       const isTestnet = await this.stellarService.getIsTestnet();
       const balances = await this.stellarService.getAccountBalances({
@@ -549,10 +549,10 @@ export class ProsperService {
     }
   }
 
-  public async getBalance(userId: string): Promise<GetBalanceResponse> {
+  public async getBalance(prosperId: string): Promise<GetBalanceResponse> {
     this.logger.debug('getBalance called');
     try {
-      const user = await this.checkUser(userId);
+      const user = await this.checkUser(prosperId);
       const { secret, ...balanceInfo } = user;
       const _secret = secret
       return balanceInfo;

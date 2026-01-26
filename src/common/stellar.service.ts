@@ -67,7 +67,7 @@ export class StellarService {
   }
 
   public getProsperAsset(isTestnet: boolean): Asset {
-    const issuer = isTestnet
+    const issuer: string = isTestnet
       ? this.stellarConfig.prosper_issuer_address
       : this.stellarConfig.prosper_issuer_address_prod;
 
@@ -76,7 +76,7 @@ export class StellarService {
         `PROSPER issuer address not defined for ${isTestnet ? 'testnet' : 'mainnet'}`,
       );
     }
-    return new Asset('PROSPER', issuer);
+    return new Asset('PROSPER', Keypair.fromSecret(issuer).publicKey());
   }
 
   public getProsperIssuer(isTestnet: boolean): Keypair {
@@ -89,7 +89,7 @@ export class StellarService {
         `PROSPER issuer address not defined for ${isTestnet ? 'testnet' : 'mainnet'}`,
       );
     }
-    return Keypair.fromPublicKey(issuer);
+    return Keypair.fromSecret(issuer);
   }
 
   public getProsperTeasury(isTestnet: boolean): Keypair | null {
@@ -326,14 +326,14 @@ export class StellarService {
       const prosperIssuer = isTestnet
         ? this.stellarConfig.prosper_issuer_address
         : this.stellarConfig.prosper_issuer_address_prod;
-
+      const prosperPublicKey = Keypair.fromSecret(prosperIssuer).publicKey();
       for (const b of account.balances) {
         if (b.asset_type === 'native') {
           balanceXLM = b.balance;
         } else {
           const assetCode = (b as any).asset_code;
           const assetIssuer = (b as any).asset_issuer;
-          if (assetCode === 'PROSPER' && assetIssuer === prosperIssuer) {
+          if (assetCode === 'PROSPER' && assetIssuer === prosperPublicKey) {
             balanceProsper = b.balance;
           }
         }

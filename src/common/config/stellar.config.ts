@@ -1,6 +1,6 @@
 import { registerAs } from '@nestjs/config';
 
-const is_testnet = process.env.STELLAR_ENV === 'test' ? true : false;
+const is_testnet = !process.env.STELLAR_ENV ? true : false;
 export default registerAs('stellarConfig', () => ({
   soroban_url: 'https://mainnet.sorobanrpc.com',
   base_fee: '50000',

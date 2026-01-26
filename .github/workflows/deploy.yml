@@ -62,15 +62,12 @@ jobs:
     - name: Deploy to EC2 - ProsperBackend
       run: |
         ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no node@52.11.193.89 << 'EOF'
-          cd /usr/local/src/Stellar/backend
+          cd /usr/local/src/Prosper/Autenticacion
           git checkout .
           git pull origin main
           rm -rf .env
-          cp /usr/local/src/Stellar/.env /usr/local/src/Stellar/backend
-          nvm use 22.14.0
+          cp /usr/local/src/Prosper/Autenticacion/.env /usr/local/src/Prosper/Autenticacion
           npm i
-          npm i --force
-          npm install @stellar/stellar-sdk
           pm2 restart ProsperBack
         EOF
       shell: bash

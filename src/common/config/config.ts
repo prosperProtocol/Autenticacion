@@ -6,5 +6,6 @@ export default registerAs('config', () => {
       server_secret: process.env.JWT_SECRET_KEY,
       server_port: parseInt(process.env.PORT, 10) || 3000,
       server_node_env: process.env.NODE_ENV || 'develop',
+      jwt_expires_in: parseInt(process.env.JWT_EXPIRES_IN, 10) || 3600,
   };
 });

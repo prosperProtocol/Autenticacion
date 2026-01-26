@@ -2,7 +2,7 @@ import { Body, Controller, Logger, Post, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 
 import { JwtGuard } from './auth-jwt.guard';
-import { AuthPayload } from './auth-payload.decorator';
+import { AuthPayload, Public } from './auth-payload.decorator';
 import { LoginDto, ChangePasswordDto, AuthJwtPayload } from './auth.dto';
 import { AuthService } from './auth.service';
 
@@ -13,6 +13,7 @@ export class AuthController {
   constructor(private readonly service: AuthService) {}
 
   @Post('login')
+  @Public()
   @ApiOperation({ summary: 'Login con username y password' })
   async login(@Body() payload: LoginDto) {
     return this.service.login(payload);

@@ -23,14 +23,14 @@ export class AuthService {
     private readonly authRepo: Repository<Auth>,
     private configService: ConfigService,
   ) {
-    this.serverConfig = this.configService.get('serverConfig');
+    this.serverConfig = this.configService.get('config');
   }
 
   private getJwtSecret(): string {
-    const secret = this.serverConfig.jwtSecret;
+    const secret = this.serverConfig.server_secret;
     if (!secret) {
       this.logger.error(
-        'JWT secret no está configurado en serverConfig.jwtSecret',
+        'JWT secret no está configurado en serverConfig.server_secret',
       );
       throw new BadRequestException('JWT secret no configurado');
     }
@@ -38,10 +38,10 @@ export class AuthService {
   }
 
   private getJwtExpiresInSeconds(): number {
-    const expiresIn = this.serverConfig.jwtExpiresIn;
+    const expiresIn = this.serverConfig.jwt_expires_in;
     if (!expiresIn || isNaN(Number(expiresIn))) {
       this.logger.error(
-        'JWT expiration no está configurado en serverConfig.jwtExpiresIn',
+        'JWT expiration no está configurado en serverConfig.jwt_expires_in',
       );
       throw new BadRequestException('JWT expiration no configurado');
     }
@@ -104,7 +104,6 @@ export class AuthService {
       const jwtData = this.generateJwtForUser(user);
       return {
         token: jwtData.token,
-        username: user.username,
         createdAt: jwtData.createdAt,
         expiresAt: jwtData.expiresAt,
       };

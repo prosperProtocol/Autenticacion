@@ -7,11 +7,6 @@ export class AuthLoginResponse {
   @IsString()
   token!: string;
 
-  @ApiProperty({ description: 'Nombre de usuario', example: 'usuario' })
-  @IsNotEmpty()
-  @IsString()
-  username!: string;
-
   @ApiProperty({ description: 'Fecha de creación del token (ISO string)' })
   @IsNotEmpty()
   @IsString()

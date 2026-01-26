@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Injectable,
   Logger,
+  NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
@@ -20,7 +21,6 @@ import {
 import { HorizonApi } from '@stellar/stellar-sdk/lib/horizon';
 
 import {
-  CreateProsperIssuerResponse,
   CreateWalletResponse,
   GetAccountBalancesDto,
   GetAccountBalancesResponse,
@@ -28,7 +28,7 @@ import {
   MakeProsperTransactionDto,
   MakeProsperTransactionResponse,
   SubmitTxResponse,
-} from '../dtos/stellar.dto';
+} from './stellar.dto';
 
 @Injectable()
 export class StellarService {
@@ -43,13 +43,13 @@ export class StellarService {
     this.stellarConfig = this.configService.get('stellarConfig');
   }
 
-  private getServer(isTestnet: boolean): InstanceType<typeof Horizon.Server> {
+  public getServer(isTestnet: boolean): InstanceType<typeof Horizon.Server> {
     const url = isTestnet
       ? this.stellarConfig.testnet_url
       : this.stellarConfig.mainnet_url;
 
     if (!url) {
-      throw new Error(
+      throw new NotFoundException(
         `Stellar server URL not configured for ${isTestnet ? 'testnet' : 'mainnet'}`,
       );
     }
@@ -62,7 +62,7 @@ export class StellarService {
     return server;
   }
 
-  private getNetworkPassphrase(isTestnet: boolean): string {
+  public getNetworkPassphrase(isTestnet: boolean): string {
     return isTestnet ? Networks.TESTNET : Networks.PUBLIC;
   }
 
@@ -72,27 +72,41 @@ export class StellarService {
       : this.stellarConfig.prosper_issuer_address_prod;
 
     if (!issuer) {
-      throw new Error(
+      throw new NotFoundException(
         `PROSPER issuer address not defined for ${isTestnet ? 'testnet' : 'mainnet'}`,
       );
     }
     return new Asset('PROSPER', issuer);
   }
 
-  public async getProsperTeasury(isTestnet: boolean): Promise<Keypair> {
+  public getProsperIssuer(isTestnet: boolean): Keypair {
+    const issuer = isTestnet
+      ? this.stellarConfig.prosper_issuer_address
+      : this.stellarConfig.prosper_issuer_address_prod;
+
+    if (!issuer) {
+      throw new NotFoundException(
+        `PROSPER issuer address not defined for ${isTestnet ? 'testnet' : 'mainnet'}`,
+      );
+    }
+    return Keypair.fromPublicKey(issuer);
+  }
+
+  public getProsperTeasury(isTestnet: boolean): Keypair | null {
     const treasury = isTestnet
       ? this.stellarConfig.prosper_treasury_address
       : this.stellarConfig.prosper_treasury_address_prod;
 
     if (!treasury) {
-      throw new Error(
+      this.logger.warn(
         `PROSPER treasury address not defined for ${isTestnet ? 'testnet' : 'mainnet'}`,
       );
+      return null;
     }
     return Keypair.fromSecret(treasury);
   }
 
-  private async createAccountWithBalance(
+  public async createAccountWithBalance(
     wallet: Keypair,
     isTestnet: boolean,
   ): Promise<SubmitTxResponse> {
@@ -123,7 +137,8 @@ export class StellarService {
       };
     } catch (error) {
       this.logger.error(
-        `createAccountWithBalance failed: ${error}, xdr: ${txn.toXDR()}`,
+        `Error createAccountWithBalance, xdr: ${txn.toXDR()}, error: `,
+        error,
       );
       throw new BadRequestException(
         'Error creating account on Stellar network',
@@ -131,7 +146,7 @@ export class StellarService {
     }
   }
 
-  private async addProsperTrustLine(
+  public async addProsperTrustLine(
     keypair: Keypair,
     isTestnet: boolean,
   ): Promise<SubmitTxResponse> {
@@ -162,13 +177,14 @@ export class StellarService {
       };
     } catch (error) {
       this.logger.error(
-        `addProsperTrustLine failed: ${error}, xdr: ${txn.toXDR()}`,
+        `Error addProsperTrustLine failed, xdr: ${txn.toXDR()}, error: `,
+        error,
       );
       throw new BadRequestException('Error adding trustline to PROSPER');
     }
   }
 
-  private async addHomeDomainToIssuer(
+  public async addHomeDomainToIssuer(
     issuerSecret: string,
     homeDomain: string,
     isTestnet: boolean,
@@ -192,16 +208,23 @@ export class StellarService {
         .build();
 
       txn.sign(issuer);
-      const response: HorizonApi.SubmitTransactionResponse =
-        await server.submitTransaction(txn);
-      return {
-        txHash: response.hash,
-        successful: response.successful,
-        ledger: response.ledger,
-      };
+      try {
+        const response: HorizonApi.SubmitTransactionResponse =
+          await server.submitTransaction(txn);
+        return {
+          txHash: response.hash,
+          successful: response.successful,
+          ledger: response.ledger,
+        };
+      } catch (error) {
+        this.logger.error(
+          `Error addHomeDomainToIssuer failed, xdr: ${txn.toXDR()}, error: `,
+          error,
+        );
+      }
     } catch (error) {
-      this.logger.error(error);
-      throw new BadRequestException('addHomeDomainToIssuer failed');
+      this.logger.error(`Error addHomeDomainToIssuer failed: `, error);
+      throw new BadRequestException('Error setting home domain to issuer');
     }
   }
 
@@ -226,42 +249,8 @@ export class StellarService {
         successful: response.successful,
       };
     } catch (error) {
-      this.logger.error(error);
-      throw new BadRequestException('createUserWallet failed');
-    }
-  }
-
-  public async createProsperIssuer(
-    home_domain: string,
-    isTestnet: boolean,
-  ): Promise<CreateProsperIssuerResponse> {
-    const configuredSecret = isTestnet
-      ? this.stellarConfig.prosper_issuer_secret
-      : this.stellarConfig.prosper_issuer_secret_prod;
-
-    if (configuredSecret) {
-      const kp = Keypair.fromSecret(configuredSecret);
-      return {
-        publicKey: kp.publicKey(),
-        secretKey: undefined,
-        alreadyConfigured: true,
-      };
-    }
-
-    // create new issuer and fund it
-    const issuer = Keypair.random();
-    try {
-      await this.createAccountWithBalance(issuer, isTestnet);
-      await this.addHomeDomainToIssuer(issuer.secret(), home_domain, isTestnet);
-      // issuer usually does not need a trustline; it issues the asset
-      return {
-        publicKey: issuer.publicKey(),
-        secretKey: issuer.secret(),
-        alreadyConfigured: false,
-      };
-    } catch (error) {
-      this.logger.error(error);
-      throw new BadRequestException('createProsperIssuer failed');
+      this.logger.error('Error createUserWallet failed: ', error);
+      throw new BadRequestException('Error creating user wallet');
     }
   }
 
@@ -279,8 +268,8 @@ export class StellarService {
         successful: true,
       };
     } catch (error) {
-      this.logger.error(error);
-      throw new BadRequestException('createProsperTreasury failed');
+      this.logger.error(`Error createProsperTreasury failed, error: `, error);
+      throw new BadRequestException('Error creating Prosper treasury account');
     }
   }
 
@@ -318,13 +307,13 @@ export class StellarService {
         ledger: response.ledger,
       };
     } catch (error) {
-      this.logger.error(error);
-      throw new BadRequestException('issueProsperToTreasury failed');
+      this.logger.error(`Error issueProsperToTreasury failed, error: `, error);
+      throw new BadRequestException('Error issuing Prosper to treasury');
     }
   }
 
   public async getAccountBalances(
-    payload: GetAccountBalancesDto
+    payload: GetAccountBalancesDto,
   ): Promise<GetAccountBalancesResponse> {
     try {
       const { address, isTestnet } = payload;
@@ -352,7 +341,7 @@ export class StellarService {
 
       return { address, balanceXLM, balanceProsper };
     } catch (error) {
-      this.logger.error(`getAccountBalances failed: ${error}`);
+      this.logger.error(`Error fetching account balances, error: `, error);
       throw new BadRequestException('Error fetching account balances');
     }
   }
@@ -361,7 +350,8 @@ export class StellarService {
     payload: MakeProsperTransactionDto,
   ): Promise<MakeProsperTransactionResponse> {
     try {
-      const {sourcePrivateKey, receiverPublicKey, amount, isTestnet, memo} = payload;
+      const { sourcePrivateKey, receiverPublicKey, amount, isTestnet, memo } =
+        payload;
       const server = this.getServer(isTestnet);
       const asset = this.getProsperAsset(isTestnet);
       const memoText = memo || ' ';
@@ -388,15 +378,16 @@ export class StellarService {
         .build();
 
       txn.sign(sourceKeys);
-      const response: HorizonApi.SubmitTransactionResponse = await server.submitTransaction(txn);
+      const response: HorizonApi.SubmitTransactionResponse =
+        await server.submitTransaction(txn);
       return {
         txHash: response.hash,
         successful: response.successful,
         ledger: response.ledger,
       };
     } catch (error) {
-      this.logger.error(`makeProsperTransaction failed: ${error}`);
-      throw new BadRequestException('makeProsperTransaction failed');
+      this.logger.error(`Error making Prosper transaction, error: `, error);
+      throw new BadRequestException('Error making Prosper transaction');
     }
   }
 }
@@ -422,7 +413,7 @@ export class StellarService {
         throw new NotFoundException(`${publicKey} Balance PROSPER Not Found!`);
       }
     } catch (error) {
-      this.logger.error(error);
+      this.logger.error(`Error verifying account Prosper: ${error}`);
       throw new NotFoundException(`${publicKey} Not Found!`);
     }
   }

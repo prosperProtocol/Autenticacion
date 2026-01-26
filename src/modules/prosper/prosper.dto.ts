@@ -4,23 +4,77 @@ import {
   IsNotEmpty,
   IsNumber,
   IsOptional,
-  IsPositive,
   IsString,
-  IsDateString,
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class CreateFundDto {
-  @ApiProperty({ description: 'Cantidad inicial a emitir' })
+  @ApiProperty({ description: 'Cantidad inicial a emitir', required: false })
   @IsString()
-  @IsNotEmpty()
-  initialAmount: string;
+  @IsOptional()
+  initialAmount?: string;
 
-  @ApiProperty({ description: 'Dominio home para SEP-10 / well-known' })
+  @ApiProperty({
+    description: 'Dominio home para SEP-10 / well-known',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  homeDomain?: string;
+
+  @ApiProperty({
+    description: 'Identificador de la transacción en Prosper',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  prosperTxId?: string;
+}
+
+export class CreateFundResponse {
+  @ApiProperty()
   @IsString()
   @IsNotEmpty()
-  homeDomain: string;
+  publicKey: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  secretKey?: string;
+
+  @ApiProperty()
+  @IsBoolean()
+  alreadyConfigured: boolean;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  homeDomain?: string;
+
+  @ApiProperty({
+    description: 'Hash de la transacción en la red Stellar',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  txHash?: string;
+
+  @ApiProperty({
+    description: 'Si la transacción fue exitosa',
+    required: false,
+  })
+  @IsBoolean()
+  @IsOptional()
+  successful?: boolean;
+
+  @ApiProperty({
+    description: 'Número de ledger donde quedó incluida la tx',
+    required: false,
+  })
+  @IsNumber()
+  @IsOptional()
+  ledger?: number;
 }
 
 export class MintDto {
@@ -29,7 +83,7 @@ export class MintDto {
   @IsNotEmpty()
   amount: string;
 
-  @ApiProperty()
+  @ApiProperty({ required: false })
   @IsString()
   @IsOptional()
   reason?: string;
@@ -46,22 +100,23 @@ export class NewUserDto {
   @IsNotEmpty()
   userReferenceId: string;
 
-  @ApiProperty()
+  @ApiProperty({
+    description: 'Identificador de la transacción en Prosper',
+    required: true,
+  })
   @IsString()
-  @IsOptional()
-  prosperTxId?: string;
+  @IsNotEmpty()
+  prosperTxId: string;
 }
 
 export class DepositDto {
-  @ApiProperty()
+  @ApiProperty({
+    description: 'Identificador de la transacción en Prosper',
+    required: true,
+  })
   @IsString()
-  @IsOptional()
-  userReferenceId?: string;
-
-  @ApiProperty()
-  @IsString()
-  @IsOptional()
-  address?: string;
+  @IsNotEmpty()
+  prosperTxId: string;
 
   @ApiProperty()
   @IsString()
@@ -71,7 +126,15 @@ export class DepositDto {
   @ApiProperty()
   @IsString()
   @IsOptional()
-  prosperTxId?: string;
+  userReferenceId?: string;
+
+  @ApiProperty({
+    required: false,
+    description: 'Dirección de la wallet del usuario',
+  })
+  @IsString()
+  @IsOptional()
+  address?: string;
 }
 
 export class TransferMetadataDto {
@@ -112,10 +175,13 @@ export class TransferDto {
   @IsNotEmpty()
   toUserId: string;
 
-  @ApiProperty()
+  @ApiProperty({
+    description: 'Identificador de la transacción en Prosper',
+    required: true,
+  })
   @IsString()
-  @IsOptional()
-  prosperTxId?: string;
+  @IsNotEmpty()
+  prosperTxId: string;
 
   @ApiProperty({ type: TransferMetadataDto, required: false })
   @IsOptional()

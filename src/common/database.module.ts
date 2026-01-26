@@ -8,10 +8,10 @@ import { TypeOrmModule } from '@nestjs/typeorm';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => {
-        const dbConfig = configService.get('config.database')
+        const dbConfig = configService.get('config')
         return {
           type: 'postgres',
-          url: dbConfig.url,
+          url: dbConfig.database_url,
           // synchronize: true,
           synchronize: false,
           // logging: ['error', 'query'],

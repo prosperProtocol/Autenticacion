@@ -9,8 +9,6 @@ import {
   DeleteDateColumn,
 } from 'typeorm';
 
-import { CRUDEntity } from 'src/common/utils/CRUD';
-
 import { Wallets } from './wallets';
 
 export enum TransferStatus {
@@ -31,6 +29,7 @@ export enum FundsStatus {
 }
 
 export enum TxType {
+  MINT = 'Mint',
   DEPOSITO = 'Depósito',
   RETIRO = 'Retiro',
   TRANSFERENCIA = 'Transferencia',
@@ -38,7 +37,7 @@ export enum TxType {
 }
 
 @Entity()
-export class Transacciones extends CRUDEntity {
+export class Transacciones {
   @PrimaryGeneratedColumn()
   id: number;
 
@@ -83,9 +82,15 @@ export class Transacciones extends CRUDEntity {
   @JoinColumn({ name: 'walletFromId' })
   walletFrom?: Wallets;
 
+    @Column({ name: 'walletFromId', nullable: true })
+  walletFromId: number;
+
   @ManyToOne(() => Wallets, (w) => w.transactionsTo, { nullable: true })
   @JoinColumn({ name: 'walletToId' })
   walletTo?: Wallets;
+
+  @Column({ name: 'walletToId', nullable: true })
+  walletToId: number;
 
   @Column({ type: 'json', nullable: true })
   extra?: any;

@@ -53,6 +53,14 @@ export class CreateProsperIssuerResponse {
   @IsBoolean()
   @IsNotEmpty()
   alreadyConfigured: boolean;
+
+  @ApiProperty({
+    description: 'Dominio asociado al issuer',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  homeDomain?: string;
 }
 
 export class SubmitTxResponse {

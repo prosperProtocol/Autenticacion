@@ -8,9 +8,13 @@ import {
   Delete,
   ParseIntPipe,
 } from '@nestjs/common';
-import { WalletsService } from './wallets.service';
-import { CreateWalletDto, UpdateWalletDto } from './dto/wallets.dto';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 
+import { CreateWalletDto, UpdateWalletDto } from './dto/wallets.dto';
+import { WalletsService } from './wallets.service';
+
+@ApiBearerAuth()
+@ApiTags('Wallets')
 @Controller('wallets')
 export class WalletsController {
   constructor(private readonly walletsService: WalletsService) {}

@@ -6,9 +6,11 @@ import { ScheduleModule } from '@nestjs/schedule';
 import config from 'src/common/config/config';
 import stellarConfig from 'src/common/config/stellar.config';
 import { DatabaseModule } from 'src/common/database.module';
-import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
-import { WalletsModule } from './modules/wallets/wallets.module';
-import { TransaccionesModule } from './modules/transacciones/transacciones.module';
+import { AuthModule } from 'src/modules/auth/auth.module';
+import { JwtGuard } from 'src/modules/auth/auth-jwt.guard';
+import { ProsperModule } from 'src/modules/prosper/prosper.module';
+import { TransaccionesModule } from 'src/modules/transacciones/transacciones.module';
+import { WalletsModule } from 'src/modules/wallets/wallets.module';
 
 @Module({
   imports: [
@@ -17,15 +19,17 @@ import { TransaccionesModule } from './modules/transacciones/transacciones.modul
       load: [config, stellarConfig],
       isGlobal: true,
     }),
+    AuthModule,
     DatabaseModule,
     ScheduleModule.forRoot(),
     TransaccionesModule,
     WalletsModule,
+    ProsperModule,
   ],
   providers: [
     {
       provide: APP_GUARD,
-      useClass: JwtAuthGuard,
+      useClass: JwtGuard,
     },
   ],
 })

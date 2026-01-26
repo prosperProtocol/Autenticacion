@@ -4,8 +4,17 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
+import { Keypair } from '@stellar/stellar-sdk';
 
-import { StellarService } from 'src/common/services/stellar.service';
+import {
+  Transacciones,
+  TransferStatus,
+  TxType,
+  WebhookStatus,
+} from 'src/entities/transacciones.entity';
+
+import { MakeProsperTransactionResponse } from 'src/common/stellar.dto';
+import { StellarService } from 'src/common/stellar.service';
 import {
   FindByFieldsResponse,
   GetTransactionsDto,
@@ -21,6 +30,7 @@ import {
   GetAssetsResponse,
   GetBalanceResponse,
   CheckUserResponse,
+  CreateFundResponse,
 } from './prosper.dto';
 
 @Injectable()
@@ -34,119 +44,541 @@ export class ProsperService {
   ) {}
 
   private async checkUser(userId: string): Promise<CheckUserResponse> {
-    this.logger.debug('checkUser called');
-    const wallets = await this.walletsService.findByFields({
-      prosperId: userId,
-    });
-    const wallet = wallets && wallets.length ? wallets[0] : null;
-    if (!wallet)
-      throw new NotFoundException(`Wallet for userId ${userId} not found`);
-    const isTestnet = await this.stellarService.getIsTestnet();
-    const balances = await this.stellarService.getAccountBalances({
-      address: wallet.address,
-      isTestnet,
-    });
-    return {
-      address: balances.address,
-      secret: wallet.secret,
-      balanceProsper: balances.balanceProsper,
-      balanceXLM: balances.balanceXLM,
-    };
+    this.logger.debug('llamando checkUser');
+    try {
+      const wallets = await this.walletsService.findByFields({
+        prosperId: userId,
+      });
+      const wallet = wallets && wallets.length ? wallets[0] : null;
+      if (!wallet)
+        throw new NotFoundException(
+          `Wallet para userId ${userId} no encontrada`,
+        );
+      const isTestnet = await this.stellarService.getIsTestnet();
+      const balances = await this.stellarService.getAccountBalances({
+        address: wallet.address,
+        isTestnet,
+      });
+      return {
+        address: balances.address,
+        secret: wallet.secret,
+        balanceProsper: balances.balanceProsper,
+        balanceXLM: balances.balanceXLM,
+      };
+    } catch (error) {
+      this.logger.error(
+        `Error en checkUser: `,
+        error instanceof Error ? error.message : String(error),
+      );
+      throw new BadRequestException('Error verificando la wallet del usuario');
+    }
   }
 
   private async checkUserAddress(address: string): Promise<CheckUserResponse> {
-    this.logger.debug('checkUserAddress called');
-    const [wallet] = await this.walletsService.findByFields({ address });
-    if (!wallet)
-      throw new NotFoundException(`Wallet for address ${address} not found`);
-    return this.checkUser(wallet.prosperId);
+    this.logger.debug('llamando checkUserAddress');
+    try {
+      const [wallet] = await this.walletsService.findByFields({ address });
+      if (!wallet) {
+        this.logger.error(`Wallet para address ${address} no encontrada`);
+        throw new NotFoundException(
+          `Wallet para address ${address} no encontrada`,
+        );
+      }
+      return this.checkUser(wallet.prosperId);
+    } catch (error) {
+      this.logger.error(
+        `Error en checkUserAddress: `,
+        error instanceof Error ? error.message : String(error),
+      );
+      throw new BadRequestException('Error verificando la wallet por address');
+    }
   }
 
-  public async createFund(payload: CreateFundDto): Promise<any> {
+  public async createFund(payload: CreateFundDto): Promise<CreateFundResponse> {
     this.logger.debug('createFund called');
-    const { initialAmount, homeDomain } = payload;
-    // TODO: crear Issue, crear Treasury y emitir initialAmount
-    throw new Error('createFund: Not implemented');
+    try {
+      const { initialAmount, homeDomain, prosperTxId } = payload;
+      if (!prosperTxId || prosperTxId.trim() === '') {
+        throw new BadRequestException('prosperTxId es requerido');
+      }
+      const isTestnet = await this.stellarService.getIsTestnet();
+      let issuer = this.stellarService.getProsperIssuer(isTestnet);
+      let response: CreateFundResponse;
+      try {
+        if (!issuer) {
+          issuer = Keypair.random();
+          await this.stellarService.createAccountWithBalance(issuer, isTestnet);
+          if (homeDomain) {
+            await this.stellarService.addHomeDomainToIssuer(
+              issuer.secret(),
+              homeDomain,
+              isTestnet,
+            );
+          }
+          if (isTestnet) {
+            this.logger.debug(
+              `New PROSPER issuer created: ${issuer.publicKey()}, ` +
+                `secret: ${issuer.secret()}`,
+            );
+          }
+          response = {
+            publicKey: issuer.publicKey(),
+            secretKey: issuer.secret(),
+            alreadyConfigured: true,
+            homeDomain,
+          };
+        } else {
+          const account = await this.stellarService
+            .getServer(isTestnet)
+            .loadAccount(issuer.publicKey());
+          if (!account) {
+            throw new BadRequestException(
+              'Error PROSPER issuer account does not exist on Stellar network',
+            );
+          }
+          if (homeDomain && account.home_domain !== homeDomain) {
+            await this.stellarService.addHomeDomainToIssuer(
+              issuer.secret(),
+              homeDomain,
+              isTestnet,
+            );
+          }
+          response = {
+            publicKey: issuer.publicKey(),
+            secretKey: undefined,
+            alreadyConfigured: true,
+            homeDomain: account.home_domain,
+          };
+        }
+        const [fromWallet] = await this.walletsService.findByFields({
+          address: issuer.publicKey(),
+        });
+        if (initialAmount && Number(initialAmount) > 0) {
+          let treasury = this.stellarService.getProsperTeasury(isTestnet);
+          if (!treasury) {
+            const newTreasury =
+              await this.stellarService.createProsperTreasury(isTestnet);
+            treasury = Keypair.fromSecret(newTreasury.secretKey);
+            await this.walletsService.create({
+              prosperId: prosperTxId,
+              address: issuer.publicKey(),
+              secret: 'N/A',
+            });
+          }
+          const asset = this.stellarService.getProsperAsset(isTestnet).code;
+          const [newWallet] = await this.walletsService.findByFields({
+            address: treasury.publicKey(),
+          });
+          if (!newWallet) {
+            throw new BadRequestException(
+              'Treasury wallet no encontrada en la base de datos',
+            );
+          }
+          const tx = await this.stellarService.makeProsperTransaction({
+            sourcePrivateKey: issuer.secret(),
+            receiverPublicKey: treasury.publicKey(),
+            amount: initialAmount,
+            isTestnet,
+            memo: prosperTxId,
+          });
+          response.ledger = tx && tx.ledger ? tx.ledger : undefined;
+          response.txHash = tx && tx.txHash ? tx.txHash : undefined;
+          response.successful = tx && tx.successful ? tx.successful : undefined;
+          const data = new Transacciones();
+          data.amount = parseFloat(initialAmount);
+          data.asset = asset;
+          data.from = issuer.publicKey();
+          data.to = treasury.publicKey();
+          data.memo = prosperTxId;
+          data.status = tx.successful
+            ? TransferStatus.COMPLETADA
+            : TransferStatus.PENDIENTE;
+          data.txType = TxType.MINT;
+          data.txHash = tx.successful ? tx.txHash : null;
+          data.webhookStatus = WebhookStatus.PENDIENTE;
+          data.walletFromId = fromWallet.id;
+          data.walletToId = newWallet.id;
+          await this.transaccionesService.create(data);
+        }
+        return response;
+      } catch (error) {
+        this.logger.error(`Error createProsperIssuer failed, error: `, error);
+        throw new BadRequestException('Error creating Prosper issuer account');
+      }
+    } catch (error) {
+      this.logger.error(
+        `Error en createFund: `,
+        error instanceof Error ? error.message : String(error),
+      );
+      throw new BadRequestException('Error creando el fondo Prosper');
+    }
   }
 
-  public async mintTokens(payload: MintDto): Promise<any> {
+  public async mintTokens(
+    payload: MintDto,
+  ): Promise<MakeProsperTransactionResponse> {
     this.logger.debug('mintTokens called');
-    const { amount, reason, prosperTxId } = payload;
-    // TODO: emitir tokens adicionales hacia treasury. Memo = prosperTxId
-    throw new Error('mintTokens: Not implemented');
+    try {
+      const { amount, reason, prosperTxId } = payload;
+      if (!prosperTxId || prosperTxId.trim() === '') {
+        throw new BadRequestException('prosperTxId es requerido');
+      }
+      try {
+        const isTestnet = await this.stellarService.getIsTestnet();
+        const issuer = this.stellarService.getProsperIssuer(isTestnet);
+        const treasury = this.stellarService.getProsperTeasury(isTestnet);
+        if (!issuer || !treasury) {
+          throw new BadRequestException(
+            'Falta configurar issuer o treasury de PROSPER',
+          );
+        }
+        const [toWallet] = await this.walletsService.findByFields({
+          address: issuer.publicKey(),
+        });
+        const [fromWallet] = await this.walletsService.findByFields({
+          address: treasury.publicKey(),
+        });
+        if (!fromWallet || !toWallet) {
+          throw new BadRequestException(
+            'Issuer o Treasury wallet no encontrados en la base de datos',
+          );
+        }
+        const asset = this.stellarService.getProsperAsset(isTestnet).code;
+        const tx = await this.stellarService.makeProsperTransaction({
+          sourcePrivateKey: issuer.secret(),
+          receiverPublicKey: treasury.publicKey(),
+          amount,
+          isTestnet,
+          memo: prosperTxId,
+        });
+        const data = new Transacciones();
+        data.amount = parseFloat(amount);
+        data.asset = asset;
+        data.from = issuer.publicKey();
+        data.to = treasury.publicKey();
+        data.memo = prosperTxId;
+        data.status = tx.successful
+          ? TransferStatus.COMPLETADA
+          : TransferStatus.PENDIENTE;
+        data.txType = TxType.MINT;
+        data.txHash = tx.successful ? tx.txHash : null;
+        data.webhookStatus = WebhookStatus.PENDIENTE;
+        data.walletFromId = toWallet.id;
+        data.walletToId = fromWallet.id;
+        if (reason) {
+          data.extra = { reason };
+        }
+        await this.transaccionesService.create(data);
+        return tx;
+      } catch (error) {
+        this.logger.error(`Error mintTokens failed, error: `, error);
+        throw new BadRequestException('Error minting Prosper tokens');
+      }
+    } catch (error) {
+      this.logger.error(
+        `Error en mintTokens: `,
+        error instanceof Error ? error.message : String(error),
+      );
+      throw new BadRequestException('Error minting Prosper tokens');
+    }
   }
 
-  public async getAssets(isTestnet = true): Promise<GetAssetsResponse> {
+  public async getAssets(): Promise<GetAssetsResponse> {
     this.logger.debug('getAssets called');
-    // TODO: devolver Issue y Treasury info, balances agregados
-    return {
-      issue: { address: 'TODO_ISSUER_ADDRESS', assetCode: 'PROSPER' },
-      treasury: { address: 'TODO_TREASURY_ADDRESS', balance: '0' },
-    };
+    try {
+      const isTestnet = await this.stellarService.getIsTestnet();
+      const assetCode = this.stellarService.getProsperAsset(isTestnet);
+      const issuer = this.stellarService.getProsperIssuer(isTestnet);
+      const treasury = this.stellarService.getProsperTeasury(isTestnet);
+      const balance = await this.stellarService.getAccountBalances({
+        address: treasury.publicKey(),
+        isTestnet,
+      });
+      return {
+        issue: { address: issuer.publicKey(), assetCode: assetCode.code },
+        treasury: {
+          address: treasury.publicKey(),
+          balance: balance.balanceProsper,
+        },
+      };
+    } catch (error) {
+      this.logger.error(
+        `Error en getAssets: `,
+        error instanceof Error ? error.message : String(error),
+      );
+      throw new BadRequestException('Error obteniendo los activos de Prosper');
+    }
   }
 
-  public async createOrEnsureUser(payload: NewUserDto): Promise<any> {
+  public async createOrEnsureUser(
+    payload: NewUserDto,
+  ): Promise<GetBalanceResponse> {
     this.logger.debug('createOrEnsureUser called');
-    const { userReferenceId, prosperTxId } = payload;
-    // TODO: crear wallet si no existe, fondear con XLM y agregar trustline al Issue
-    throw new Error('createOrEnsureUser: Not implemented');
+    try {
+      const { userReferenceId, prosperTxId } = payload;
+      if (!prosperTxId || prosperTxId.trim() === '') {
+        throw new BadRequestException('prosperTxId es requerido');
+      }
+      const isTestnet = await this.stellarService.getIsTestnet();
+      const wallets = await this.walletsService.findByFields({
+        prosperId: userReferenceId,
+      });
+      const wallet = wallets && wallets.length ? wallets[0] : null;
+      if (!wallet) {
+        const newWallet = Keypair.random();
+        await this.stellarService.createAccountWithBalance(
+          newWallet,
+          isTestnet,
+        );
+        await this.stellarService.addProsperTrustLine(newWallet, isTestnet);
+        await this.walletsService.create({
+          prosperId: userReferenceId,
+          address: newWallet.publicKey(),
+          secret: newWallet.secret(),
+        });
+        this.logger.debug(
+          `New wallet created for userReferenceId ${userReferenceId}: ` +
+            `address ${newWallet.publicKey()}`,
+        );
+        if (isTestnet) {
+          this.logger.debug(`secret: ${newWallet.secret()}`);
+        }
+      }
+      return this.getBalance(userReferenceId);
+    } catch (error) {
+      this.logger.error(
+        `Error en createOrEnsureUser: `,
+        error instanceof Error ? error.message : String(error),
+      );
+      throw new BadRequestException(
+        'Error creando o verificando la wallet del usuario',
+      );
+    }
   }
 
-  public async deposit(payload: DepositDto): Promise<any> {
-    this.logger.debug('deposit called');
-    const { userReferenceId, address, amount, prosperTxId } = payload;
-    if (!userReferenceId && !address) {
-      throw new BadRequestException('userReferenceId or address is required');
+  public async deposit(payload: DepositDto): Promise<Partial<Transacciones>> {
+    this.logger.debug('llamando deposit');
+    try {
+      const { userReferenceId, address, amount, prosperTxId } = payload;
+      if (!prosperTxId || prosperTxId.trim() === '') {
+        throw new BadRequestException('prosperTxId es requerido');
+      }
+      if (!userReferenceId && !address) {
+        throw new BadRequestException('userReferenceId o address es requerido');
+      }
+      if (amount == null || isNaN(Number(amount)) || Number(amount) <= 0) {
+        throw new BadRequestException('amount debe ser un número positivo');
+      }
+      const user = userReferenceId
+        ? await this.checkUser(userReferenceId)
+        : await this.checkUserAddress(address);
+      const isTestnet = await this.stellarService.getIsTestnet();
+      const teasureKey = this.stellarService.getProsperTeasury(isTestnet);
+      const [fromWallet] = await this.walletsService.findByFields({
+        address: user.address,
+      });
+      const [toWallet] = await this.walletsService.findByFields({
+        address: teasureKey.publicKey(),
+      });
+      if (!fromWallet || !toWallet) {
+        throw new BadRequestException(
+          'Error: fromWallet o toWallet no encontrado en la base de datos',
+        );
+      }
+      const tx = await this.stellarService.makeProsperTransaction({
+        sourcePrivateKey: teasureKey.secret(),
+        receiverPublicKey: user.address,
+        amount,
+        isTestnet,
+        memo: prosperTxId || ' ',
+      });
+      const data = new Transacciones();
+      data.amount = parseFloat(amount);
+      data.asset = this.stellarService.getProsperAsset(
+        await this.stellarService.getIsTestnet(),
+      ).code;
+      data.from = teasureKey.publicKey();
+      data.to = user.address;
+      data.memo = prosperTxId;
+      data.status = tx.successful
+        ? TransferStatus.COMPLETADA
+        : TransferStatus.PENDIENTE;
+      data.txType = TxType.DEPOSITO;
+      data.txHash = tx.successful ? tx.txHash : null;
+      data.webhookStatus = WebhookStatus.PENDIENTE;
+      data.walletFromId = fromWallet.id;
+      data.walletToId = toWallet.id;
+      await this.transaccionesService.create(data);
+      return tx;
+    } catch (error) {
+      this.logger.error(
+        `Error en deposit: `,
+        error instanceof Error ? error.message : String(error),
+      );
+      throw new BadRequestException('Error procesando depósito');
     }
-    if (amount == null || isNaN(Number(amount)) || Number(amount) <= 0) {
-      throw new BadRequestException('amount must be a positive number');
-    }
-    const user = userReferenceId
-    ? await this.checkUser(userReferenceId)
-    : await this.checkUserAddress(address);
-    const isTestnet = await this.stellarService.getIsTestnet();
-    const teasureKey = await this.stellarService.getProsperTeasury(isTestnet);
-    const tx = await this.stellarService.makeProsperTransaction({
-      sourcePrivateKey: teasureKey.secret(),
-      receiverPublicKey: user.address,
-      amount,
-      isTestnet,
-      memo: prosperTxId || ' ',
-    });
-    // TODO Guardar en la base de datos
-    return tx;
   }
 
-  public async transfer(payload: TransferDto): Promise<any> {
-    this.logger.debug('transfer called');
-    const { fromUserId, toUserId, amount, prosperTxId, metadata } = payload;
-    const fromUser = await this.checkUser(fromUserId);
-    const toUser = await this.checkUser(toUserId);
-    if (fromUser.balanceProsper < amount) {
-      throw new BadRequestException('Insufficient balance for transfer');
+  public async retire(payload: DepositDto): Promise<Partial<Transacciones>> {
+    this.logger.debug('llamando retire');
+    try {
+      const { userReferenceId, address, amount, prosperTxId } = payload;
+      if (!userReferenceId && !address) {
+        throw new BadRequestException('userReferenceId o address es requerido');
+      }
+      if (!prosperTxId || prosperTxId.trim() === '') {
+        throw new BadRequestException('prosperTxId es requerido');
+      }
+      if (amount == null || isNaN(Number(amount)) || Number(amount) <= 0) {
+        throw new BadRequestException('amount debe ser un número positivo');
+      }
+      const user = userReferenceId
+        ? await this.checkUser(userReferenceId)
+        : await this.checkUserAddress(address);
+      const isTestnet = await this.stellarService.getIsTestnet();
+      const teasureKey = this.stellarService.getProsperTeasury(isTestnet);
+      const balance = await this.stellarService.getAccountBalances({
+        address: user.address,
+        isTestnet,
+      });
+      if (Number(balance.balanceProsper) < Number(amount)) {
+        this.logger.error('Saldo insuficiente para retiro');
+        throw new BadRequestException('Saldo insuficiente para retiro');
+      }
+      const [fromWallet] = await this.walletsService.findByFields({
+        address: user.address,
+      });
+      const [toWallet] = await this.walletsService.findByFields({
+        address: teasureKey.publicKey(),
+      });
+      if (!fromWallet || !toWallet) {
+        throw new BadRequestException(
+          'Error No encontrado fromWallet o toWallet en la DB',
+        );
+      }
+      const tx = await this.stellarService.makeProsperTransaction({
+        sourcePrivateKey: user.secret,
+        receiverPublicKey: teasureKey.publicKey(),
+        amount,
+        isTestnet,
+        memo: prosperTxId || ' ',
+      });
+      const data = new Transacciones();
+      data.amount = parseFloat(amount);
+      data.asset = this.stellarService.getProsperAsset(isTestnet).code;
+      data.from = user.address;
+      data.to = teasureKey.publicKey();
+      data.memo = prosperTxId;
+      data.status = tx.successful
+        ? TransferStatus.COMPLETADA
+        : TransferStatus.PENDIENTE;
+      data.txType = TxType.RETIRO;
+      data.txHash = tx.successful ? tx.txHash : null;
+      data.webhookStatus = WebhookStatus.PENDIENTE;
+      data.walletFromId = fromWallet.id;
+      data.walletToId = toWallet.id;
+      await this.transaccionesService.create(data);
+      return tx;
+    } catch (error) {
+      this.logger.error(
+        `Error en retiro: `,
+        error instanceof Error ? error.message : String(error),
+      );
+      throw new BadRequestException('Error procesando retiro');
     }
-    const tx = await this.stellarService.makeProsperTransaction({
-      sourcePrivateKey: fromUser.secret,
-      receiverPublicKey: toUser.address,
-      amount,
-      isTestnet: await this.stellarService.getIsTestnet(),
-      memo: prosperTxId || ' ',
-    });
-    // TODO Guardar en la base de datos
-    return tx;
+  }
+
+  public async transfer(payload: TransferDto): Promise<Partial<Transacciones>> {
+    this.logger.debug('llamando transfer');
+    try {
+      const { fromUserId, toUserId, amount, prosperTxId, metadata } = payload;
+      if (!prosperTxId || prosperTxId.trim() === '') {
+        throw new BadRequestException('prosperTxId es requerido');
+      }
+      const fromUser = await this.checkUser(fromUserId);
+      const toUser = await this.checkUser(toUserId);
+      if (fromUser.balanceProsper < amount) {
+        this.logger.error('Saldo insuficiente para transferencia');
+        throw new BadRequestException('Saldo insuficiente para transferencia');
+      }
+      const tx = await this.stellarService.makeProsperTransaction({
+        sourcePrivateKey: fromUser.secret,
+        receiverPublicKey: toUser.address,
+        amount,
+        isTestnet: await this.stellarService.getIsTestnet(),
+        memo: prosperTxId || ' ',
+      });
+      const [fromWallet] = await this.walletsService.findByFields({
+        address: fromUser.address,
+      });
+      const [toWallet] = await this.walletsService.findByFields({
+        address: toUser.address,
+      });
+      if (!fromWallet || !toWallet) {
+        throw new BadRequestException(
+          'Error No encontrado fromWallet o toWallet en la DB',
+        );
+      }
+      const data = new Transacciones();
+      data.amount = parseFloat(amount);
+      data.asset = this.stellarService.getProsperAsset(
+        await this.stellarService.getIsTestnet(),
+      ).code;
+      data.from = fromUser.address;
+      data.to = toUser.address;
+      data.memo = prosperTxId;
+      data.status = tx.successful
+        ? TransferStatus.COMPLETADA
+        : TransferStatus.PENDIENTE;
+      data.txType = TxType.TRANSFERENCIA;
+      data.txHash = tx.successful ? tx.txHash : null;
+      data.webhookStatus = WebhookStatus.PENDIENTE;
+      data.walletFromId = fromWallet.id;
+      data.walletToId = toWallet.id;
+      if (metadata) {
+        data.extra = { metadata };
+      }
+      await this.transaccionesService.create(data);
+      return tx;
+    } catch (error) {
+      this.logger.error(
+        `Error en transfer: `,
+        error instanceof Error ? error.message : String(error),
+      );
+      throw new BadRequestException('Error procesando transferencia');
+    }
   }
 
   public async getBalance(userId: string): Promise<GetBalanceResponse> {
     this.logger.debug('getBalance called');
-    const user = await this.checkUser(userId);
-    const { secret, ...balanceInfo } = user;
-    return balanceInfo;
+    try {
+      const user = await this.checkUser(userId);
+      const { secret, ...balanceInfo } = user;
+      const _secret = secret
+      return balanceInfo;
+    } catch (error) {
+      this.logger.error(
+        `Error en getBalance: `,
+        error instanceof Error ? error.message : String(error),
+      );
+      throw new BadRequestException('Error obteniendo balance');
+    }
   }
 
   public async getTransactions(
     payload: GetTransactionsDto,
   ): Promise<FindByFieldsResponse> {
-    this.logger.debug('getUserTransactions called');
-    return this.transaccionesService.findByFields(payload);
+    this.logger.debug('llamando getUserTransactions');
+    try {
+      return this.transaccionesService.findByFields(payload);
+    } catch (error) {
+      this.logger.error(
+        `Error en getUserTransactions: `,
+        error instanceof Error ? error.message : String(error),
+      );
+      throw new BadRequestException(
+        'Error obteniendo transacciones del usuario',
+      );
+    }
   }
 }

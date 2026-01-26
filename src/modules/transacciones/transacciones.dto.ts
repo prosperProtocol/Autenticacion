@@ -71,6 +71,7 @@ export class CreateTransaccionDto {
 
   @IsOptional()
   @IsObject()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   extra?: any;
 }
 
@@ -137,6 +138,7 @@ export class UpdateTransaccionDto {
 
   @IsOptional()
   @IsObject()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   extra?: any;
 }
 

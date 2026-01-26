@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Post, Param, Delete } from '@nestjs/common';
-import { ApiTags, ApiBody } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 
 import {
   CreateFundDto,
@@ -11,6 +11,7 @@ import {
 import { ProsperService } from './prosper.service';
 import { GetTransactionsDto } from '../transacciones/transacciones.dto';
 
+@ApiBearerAuth()
 @ApiTags('Prosper')
 @Controller('prosper')
 export class ProsperController {
@@ -47,8 +48,8 @@ export class ProsperController {
   }
 
   @Delete('users/retire')
-  async retire(@Body() payload: { userId: string }) {
-    // return this.service.retireUser(payload.userId);
+  async retire(@Body() payload: DepositDto) {
+    return this.service.retire(payload);
   }
 
   @Get('users/:userId/balances')

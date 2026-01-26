@@ -1,14 +1,33 @@
 import {
-  BaseEntity as TypeOrmBaseEntity,
+  Column,
+  Entity,
   PrimaryGeneratedColumn,
   CreateDateColumn,
   UpdateDateColumn,
   DeleteDateColumn,
 } from 'typeorm';
 
-export abstract class CRUDEntity extends TypeOrmBaseEntity {
+export enum roleUser {
+  admin = 'admin',
+  user = 'user',
+}
+@Entity()
+export class Auth {
   @PrimaryGeneratedColumn()
   id: number;
+
+  @Column({ type: 'varchar' })
+  username: string;
+
+  @Column({ type: 'varchar' })
+  password: string;
+
+  @Column({
+    type: 'enum',
+    enum: roleUser,
+    default: roleUser.user,
+  })
+  role: roleUser;
 
   @CreateDateColumn({
     type: 'timestamptz',

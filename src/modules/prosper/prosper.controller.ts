@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Param, Delete } from '@nestjs/common';
+import { Body, Controller, Get, Post, Param, Delete, Query } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 
 import {
@@ -60,7 +60,7 @@ export class ProsperController {
   @Get('users/:prosperId/transactions')
   async userTransactions(
     @Param('prosperId') prosperId: string,
-    @Body() payload: GetTransactionsDto,
+    @Query() payload: GetTransactionsDto,
   ) {
     payload.prosperId = prosperId;
     return this.service.getTransactions(payload);

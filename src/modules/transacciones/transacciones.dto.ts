@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsNumber,
   IsString,
@@ -165,30 +165,38 @@ export class PaginationRequestDto {
 }
 
 export class GetTransactionsDto extends PaginationRequestDto {
-  @ApiProperty({ description: 'User id (prosperId) que filtra transacciones' })
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  prosperId: string;
+  prosperId?: string;
 
-  @ApiProperty({
-    required: false,
-    description: 'Fecha de creación (ISO)',
-    example: '2024-01-01',
+  @ApiPropertyOptional({
+    description: 'Fecha de creación (ISO), ejemplo: "2024-01-01"',
   })
   @IsOptional()
   @IsString()
   createdAt?: string;
 
-  @ApiProperty({
-    required: false,
-    description: 'Estado de la transacción',
-    example: `${TransferStatus.PENDIENTE}, ${TransferStatus.COMPLETADA}, ${TransferStatus.RECHAZADA}`,
+  @ApiPropertyOptional({
+    description:
+      'Estado de la transacción, ' +
+      `ejemplo: ${TransferStatus.PENDIENTE}, ` +
+      `${TransferStatus.COMPLETADA}, ` +
+      `${TransferStatus.RECHAZADA}`,
   })
   @IsOptional()
   @IsString()
   status?: string;
 
-  @ApiProperty({ required: false, description: 'Tipo de transacción' })
+  @ApiPropertyOptional({
+    description:
+      'Tipo de transacción' +
+      `ejemplo: ` +
+      `${TxType.MINT}, ` +
+      `${TxType.DEPOSITO}, ` +
+      `${TxType.RETIRO}, ` +
+      `${TxType.TRANSFERENCIA}, ` +
+      `${TxType.STAKING}`,
+  })
   @IsOptional()
   @IsString()
   txType?: string;

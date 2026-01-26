@@ -121,7 +121,8 @@ export class TransaccionesService {
       const whereClauses: string[] = [
         '(t."walletFromId" = $1 OR t."walletToId" = $1)',
       ];
-      const params = new Array(wallet.id);
+      const params = new Array();
+      params.push(wallet.id);
 
       if (status) {
         params.push(status);
@@ -163,9 +164,9 @@ export class TransaccionesService {
         t."txHash",
         t."createdAt",
         t."updatedAt",
-        wf.prosperId AS "walletFrom_prosperId",
+        wf."prosperId" AS "walletFrom_prosperId",
         wf.address AS "walletFrom_address",
-        wt.prosperId AS "walletTo_prosperId",
+        wt."prosperId" AS "walletTo_prosperId",
         wt.address AS "walletTo_address"
       FROM transacciones t
       LEFT JOIN wallets wf ON t."walletFromId" = wf.id

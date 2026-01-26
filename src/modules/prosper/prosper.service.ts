@@ -289,14 +289,31 @@ export class ProsperService {
       const isTestnet = await this.stellarService.getIsTestnet();
       const assetCode = this.stellarService.getProsperAsset(isTestnet);
       const issuer = this.stellarService.getProsperIssuer(isTestnet);
+      const [issuerWallet] = await this.walletsService.findByFields({
+        address: issuer.publicKey(),
+      });
+      if (!issuerWallet) {
+        throw new NotFoundException('Issuer wallet no encontrada en la DB');
+      }
       const treasury = this.stellarService.getProsperTeasury(isTestnet);
+      const [treasuryWallet] = await this.walletsService.findByFields({
+        address: treasury.publicKey(),
+      });
+      if (!treasuryWallet) {
+        throw new NotFoundException('Treasury wallet no encontrada en la DB');
+      }
       const balance = await this.stellarService.getAccountBalances({
         address: treasury.publicKey(),
         isTestnet,
       });
       return {
-        issue: { address: issuer.publicKey(), assetCode: assetCode.code },
+        issue: {
+          prosperId: issuerWallet.prosperId,
+          address: issuer.publicKey(),
+          assetCode: assetCode.code,
+        },
         treasury: {
+          prosperId: treasuryWallet.prosperId,
           address: treasury.publicKey(),
           balance: balance.balanceProsper,
         },
@@ -554,7 +571,7 @@ export class ProsperService {
     try {
       const user = await this.checkUser(prosperId);
       const { secret, ...balanceInfo } = user;
-      const _secret = secret
+      const _secret = secret;
       return balanceInfo;
     } catch (error) {
       this.logger.error(

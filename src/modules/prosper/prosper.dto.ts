@@ -203,6 +203,10 @@ export class AssetInfoDto {
 export class IssueDto {
   @ApiProperty()
   @IsString()
+  prosperId: string;
+
+  @ApiProperty()
+  @IsString()
   address: string;
 
   @ApiProperty()
@@ -211,6 +215,10 @@ export class IssueDto {
 }
 
 export class TreasuryDto {
+  @ApiProperty()
+  @IsString()
+  prosperId: string;
+
   @ApiProperty()
   @IsString()
   address: string;

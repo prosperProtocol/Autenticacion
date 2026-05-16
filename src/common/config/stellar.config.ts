@@ -14,5 +14,7 @@ export default registerAs('stellarConfig', () => ({
   starting_balance: '3',
   testnet_url: 'https://horizon-testnet.stellar.org',
   timeout: 1800,
+  token_contract_admin: process.env.SMART_CONTRACT_ALFRED,
+  token_contract_address: process.env.TOKEN_CONTRACT_ADDRESS,
   xlm_wallet_secret: process.env.XLM_WALLET_SECRET,
 }));

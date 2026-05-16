@@ -119,14 +119,18 @@ export class DepositDto {
   @IsNotEmpty()
   amount: string;
 
-  @ApiPropertyOptional({ description: 'Identificador de referencia del usuario en el sistema externo, OPCIONAL' })
+  @ApiPropertyOptional({
+    description:
+      'Identificador de referencia del usuario en el sistema externo, OPCIONAL',
+  })
   @IsString()
   @IsOptional()
   userReferenceId?: string;
 
   @ApiProperty({
     required: false,
-    description: 'Dirección de la wallet del usuario, valor interno del protocolo, OPCIONAL',
+    description:
+      'Dirección de la wallet del usuario, valor interno del protocolo, OPCIONAL',
   })
   @IsString()
   @IsOptional()
@@ -243,7 +247,7 @@ export class GetBalanceResponse {
 
   @ApiProperty()
   @IsString()
-  balanceProsper: string;
+  balanceUSDC: string;
 
   @ApiProperty()
   @IsString()

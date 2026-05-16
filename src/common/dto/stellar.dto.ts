@@ -146,11 +146,11 @@ export class GetAccountBalancesResponse {
   balanceXLM: string;
 
   @ApiProperty({
-    description: 'Balance en PROSPER como string',
+    description: 'Balance en USDC como string',
   })
   @IsString()
   @IsNotEmpty()
-  balanceProsper: string;
+  balanceUSDC: string;
 }
 
 export class MakeProsperTransactionDto {

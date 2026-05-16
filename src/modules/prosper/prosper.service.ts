@@ -13,8 +13,8 @@ import {
   WebhookStatus,
 } from 'src/entities/transacciones.entity';
 
-import { MakeProsperTransactionResponse } from 'src/common/stellar.dto';
-import { StellarService } from 'src/common/stellar.service';
+import { MakeProsperTransactionResponse } from 'src/common/dto/stellar.dto';
+import { StellarService } from 'src/common/services/stellar.service';
 import {
   FindByFieldsResponse,
   GetTransactionsDto,
@@ -62,7 +62,7 @@ export class ProsperService {
       return {
         address: balances.address,
         secret: wallet.secret,
-        balanceProsper: balances.balanceProsper,
+        balanceUSDC: balances.balanceUSDC,
         balanceXLM: balances.balanceXLM,
       };
     } catch (error) {
@@ -70,7 +70,10 @@ export class ProsperService {
         `Error en checkUser: `,
         error instanceof Error ? error.message : String(error),
       );
-      throw new BadRequestException('Error verificando la wallet del usuario', error instanceof Error ? error.message : String(error));
+      throw new BadRequestException(
+        'Error verificando la wallet del usuario',
+        error instanceof Error ? error.message : String(error),
+      );
     }
   }
 
@@ -90,7 +93,10 @@ export class ProsperService {
         `Error en checkUserAddress: `,
         error instanceof Error ? error.message : String(error),
       );
-      throw new BadRequestException('Error verificando la wallet por address', error instanceof Error ? error.message : String(error));
+      throw new BadRequestException(
+        'Error verificando la wallet por address',
+        error instanceof Error ? error.message : String(error),
+      );
     }
   }
 
@@ -112,7 +118,10 @@ export class ProsperService {
         `Error en makeTreasury: `,
         error instanceof Error ? error.message : String(error),
       );
-      throw new BadRequestException('Error creando la treasury de Prosper', error instanceof Error ? error.message : String(error));
+      throw new BadRequestException(
+        'Error creando la treasury de Prosper',
+        error instanceof Error ? error.message : String(error),
+      );
     }
   }
 
@@ -152,7 +161,7 @@ export class ProsperService {
         });
         if (initialAmount && Number(initialAmount) > 0) {
           const treasury = this.stellarService.getProsperTeasury(isTestnet);
-          const asset = this.stellarService.getProsperAsset(isTestnet).code;
+          const asset = this.stellarService.getUSDCAsset(isTestnet).code;
           const [newWallet] = await this.walletsService.findByFields({
             address: treasury.publicKey(),
           });
@@ -161,31 +170,31 @@ export class ProsperService {
               'Treasury wallet no encontrada en la base de datos',
             );
           }
-          const tx = await this.stellarService.makeProsperTransaction({
-            sourcePrivateKey: issuer.secret(),
-            receiverPublicKey: treasury.publicKey(),
-            amount: initialAmount,
-            isTestnet,
-            memo: prosperTxId,
-          });
-          response.ledger = tx && tx.ledger ? tx.ledger : undefined;
-          response.txHash = tx && tx.txHash ? tx.txHash : undefined;
-          response.successful = tx && tx.successful ? tx.successful : undefined;
-          const data = new Transacciones();
-          data.amount = parseFloat(initialAmount);
-          data.asset = asset;
-          data.from = issuer.publicKey();
-          data.to = treasury.publicKey();
-          data.memo = prosperTxId;
-          data.status = tx.successful
-            ? TransferStatus.Completada
-            : TransferStatus.Pendiente;
-          data.txType = TxType.Mint;
-          data.txHash = tx.successful ? tx.txHash : null;
-          data.webhookStatus = WebhookStatus.Pendiente;
-          data.walletFromId = fromWallet.id;
-          data.walletToId = newWallet.id;
-          await this.transaccionesService.create(data);
+          // const tx = await this.stellarService.makeProsperTransaction({
+          //   sourcePrivateKey: issuer.secret(),
+          //   receiverPublicKey: treasury.publicKey(),
+          //   amount: initialAmount,
+          //   isTestnet,
+          //   memo: prosperTxId,
+          // });
+          // response.ledger = tx && tx.ledger ? tx.ledger : undefined;
+          // response.txHash = tx && tx.txHash ? tx.txHash : undefined;
+          // response.successful = tx && tx.successful ? tx.successful : undefined;
+          // const data = new Transacciones();
+          // data.amount = parseFloat(initialAmount);
+          // data.asset = asset;
+          // data.from = issuer.publicKey();
+          // data.to = treasury.publicKey();
+          // data.memo = prosperTxId;
+          // data.status = tx.successful
+          //   ? TransferStatus.Completada
+          //   : TransferStatus.Pendiente;
+          // data.txType = TxType.Mint;
+          // data.txHash = tx.successful ? tx.txHash : null;
+          // data.webhookStatus = WebhookStatus.Pendiente;
+          // data.walletFromId = fromWallet.id;
+          // data.walletToId = newWallet.id;
+          // await this.transaccionesService.create(data);
         }
         return response;
       } catch (error) {
@@ -233,33 +242,38 @@ export class ProsperService {
             'Issuer o Treasury wallet no encontrados en la base de datos',
           );
         }
-        const asset = this.stellarService.getProsperAsset(isTestnet).code;
-        const tx = await this.stellarService.makeProsperTransaction({
-          sourcePrivateKey: issuer.secret(),
-          receiverPublicKey: treasury.publicKey(),
-          amount,
-          isTestnet,
-          memo: prosperTxId,
-        });
-        const data = new Transacciones();
-        data.amount = parseFloat(amount);
-        data.asset = asset;
-        data.from = issuer.publicKey();
-        data.to = treasury.publicKey();
-        data.memo = prosperTxId;
-        data.status = tx.successful
-          ? TransferStatus.Completada
-          : TransferStatus.Pendiente;
-        data.txType = TxType.Mint;
-        data.txHash = tx.successful ? tx.txHash : null;
-        data.webhookStatus = WebhookStatus.Pendiente;
-        data.walletFromId = toWallet.id;
-        data.walletToId = fromWallet.id;
-        if (reason) {
-          data.extra = { reason };
-        }
-        await this.transaccionesService.create(data);
-        return tx;
+        // const asset = this.stellarService.getUSDCAsset(isTestnet).code;
+        // const tx = await this.stellarService.makeProsperTransaction({
+        //   sourcePrivateKey: issuer.secret(),
+        //   receiverPublicKey: treasury.publicKey(),
+        //   amount,
+        //   isTestnet,
+        //   memo: prosperTxId,
+        // });
+        // const data = new Transacciones();
+        // data.amount = parseFloat(amount);
+        // data.asset = asset;
+        // data.from = issuer.publicKey();
+        // data.to = treasury.publicKey();
+        // data.memo = prosperTxId;
+        // data.status = tx.successful
+        //   ? TransferStatus.Completada
+        //   : TransferStatus.Pendiente;
+        // data.txType = TxType.Mint;
+        // data.txHash = tx.successful ? tx.txHash : null;
+        // data.webhookStatus = WebhookStatus.Pendiente;
+        // data.walletFromId = toWallet.id;
+        // data.walletToId = fromWallet.id;
+        // if (reason) {
+        //   data.extra = { reason };
+        // }
+        // await this.transaccionesService.create(data);
+        // return tx;
+        return {
+          txHash: null,
+          ledger: null,
+          successful: false,
+        };
       } catch (error) {
         this.logger.error(`Error mintTokens failed, error: `, error);
         throw new BadRequestException('Error minting Prosper tokens');
@@ -280,7 +294,7 @@ export class ProsperService {
     this.logger.debug('getAssets called');
     try {
       const isTestnet = await this.stellarService.getIsTestnet();
-      const assetCode = this.stellarService.getProsperAsset(isTestnet);
+      const assetCode = this.stellarService.getUSDCAsset(isTestnet);
       const issuer = this.stellarService.getProsperIssuer(isTestnet);
       const [issuerWallet] = await this.walletsService.findByFields({
         address: issuer.publicKey(),
@@ -308,7 +322,7 @@ export class ProsperService {
         treasury: {
           prosperId: treasuryWallet.prosperId,
           address: treasury.publicKey(),
-          balance: balance.balanceProsper,
+          balance: balance.balanceUSDC,
         },
       };
     } catch (error) {
@@ -340,7 +354,7 @@ export class ProsperService {
           newWallet,
           isTestnet,
         );
-        await this.stellarService.addProsperTrustLine(newWallet, isTestnet);
+        await this.stellarService.addUSDCTrustLine(newWallet, isTestnet);
         await this.walletsService.create({
           prosperId: userReferenceId,
           address: newWallet.publicKey(),
@@ -396,7 +410,7 @@ export class ProsperService {
           'Error: fromWallet o toWallet no encontrado en la base de datos',
         );
       }
-      const tx = await this.stellarService.makeProsperTransaction({
+      const tx = await this.stellarService.makeUSDCTransaction({
         sourcePrivateKey: teasureKey.secret(),
         receiverPublicKey: user.address,
         amount,
@@ -405,7 +419,7 @@ export class ProsperService {
       });
       const data = new Transacciones();
       data.amount = parseFloat(amount);
-      data.asset = this.stellarService.getProsperAsset(
+      data.asset = this.stellarService.getUSDCAsset(
         await this.stellarService.getIsTestnet(),
       ).code;
       data.from = teasureKey.publicKey();
@@ -455,7 +469,7 @@ export class ProsperService {
         address: user.address,
         isTestnet,
       });
-      if (Number(balance.balanceProsper) < Number(amount)) {
+      if (Number(balance.balanceUSDC) < Number(amount)) {
         this.logger.error('Saldo insuficiente para retiro');
         throw new BadRequestException('Saldo insuficiente para retiro');
       }
@@ -470,7 +484,7 @@ export class ProsperService {
           'Error No encontrado fromWallet o toWallet en la DB',
         );
       }
-      const tx = await this.stellarService.makeProsperTransaction({
+      const tx = await this.stellarService.makeUSDCTransaction({
         sourcePrivateKey: user.secret,
         receiverPublicKey: teasureKey.publicKey(),
         amount,
@@ -479,7 +493,7 @@ export class ProsperService {
       });
       const data = new Transacciones();
       data.amount = parseFloat(amount);
-      data.asset = this.stellarService.getProsperAsset(isTestnet).code;
+      data.asset = this.stellarService.getUSDCAsset(isTestnet).code;
       data.from = user.address;
       data.to = teasureKey.publicKey();
       data.memo = prosperTxId;
@@ -511,11 +525,11 @@ export class ProsperService {
       }
       const fromUser = await this.checkUser(fromUserId);
       const toUser = await this.checkUser(toUserId);
-      if (fromUser.balanceProsper < amount) {
+      if (Number(fromUser.balanceUSDC) < Number(amount)) {
         this.logger.error('Saldo insuficiente para transferencia');
         throw new BadRequestException('Saldo insuficiente para transferencia');
       }
-      const tx = await this.stellarService.makeProsperTransaction({
+      const tx = await this.stellarService.makeUSDCTransaction({
         sourcePrivateKey: fromUser.secret,
         receiverPublicKey: toUser.address,
         amount,
@@ -535,7 +549,7 @@ export class ProsperService {
       }
       const data = new Transacciones();
       data.amount = parseFloat(amount);
-      data.asset = this.stellarService.getProsperAsset(
+      data.asset = this.stellarService.getUSDCAsset(
         await this.stellarService.getIsTestnet(),
       ).code;
       data.from = fromUser.address;

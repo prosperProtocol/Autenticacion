@@ -1,9 +1,11 @@
 import { Module } from '@nestjs/common';
 
-import { StellarService } from './stellar.service';
+import { StellarService } from './services/stellar.service';
+import { StakingService } from './services/staking.service';
+import { SorobanService } from './services/soroban.service';
 
 @Module({
-  providers: [StellarService],
-  exports: [StellarService],
+  providers: [StellarService, SorobanService, StakingService],
+  exports: [StellarService, SorobanService, StakingService],
 })
 export class ShareModule {}

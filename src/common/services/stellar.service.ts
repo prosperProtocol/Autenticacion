@@ -18,7 +18,6 @@ import {
   // AuthRevocableFlag,
   // AuthFlag,
 } from '@stellar/stellar-sdk';
-import { HorizonApi } from '@stellar/stellar-sdk/lib/horizon';
 
 import {
   CreateWalletResponse,
@@ -28,7 +27,7 @@ import {
   MakeProsperTransactionDto,
   MakeProsperTransactionResponse,
   SubmitTxResponse,
-} from './stellar.dto';
+} from '../dto/stellar.dto';
 
 @Injectable()
 export class StellarService {
@@ -64,6 +63,19 @@ export class StellarService {
 
   public getNetworkPassphrase(isTestnet: boolean): string {
     return isTestnet ? Networks.TESTNET : Networks.PUBLIC;
+  }
+
+  public getUSDCAsset(isTestnet: boolean): Asset {
+    const issuer: string = isTestnet
+      ? this.stellarConfig.usdc_issuer_address
+      : this.stellarConfig.usdc_issuer_address_prod;
+
+    if (!issuer) {
+      throw new NotFoundException(
+        `USDC issuer address not defined for ${isTestnet ? 'testnet' : 'mainnet'}`,
+      );
+    }
+    return new Asset('USDC', Keypair.fromSecret(issuer).publicKey());
   }
 
   public getProsperAsset(isTestnet: boolean): Asset {
@@ -129,7 +141,7 @@ export class StellarService {
       .build();
     txn.sign(source);
     try {
-      const response: HorizonApi.SubmitTransactionResponse =
+      const response: Horizon.HorizonApi.SubmitTransactionResponse =
         await server.submitTransaction(txn);
       return {
         txHash: response.hash,
@@ -147,13 +159,13 @@ export class StellarService {
     }
   }
 
-  public async addProsperTrustLine(
+  public async addUSDCTrustLine(
     keypair: Keypair,
     isTestnet: boolean,
   ): Promise<SubmitTxResponse> {
     const server = this.getServer(isTestnet);
     const account = await server.loadAccount(keypair.publicKey());
-    const asset = this.getProsperAsset(isTestnet);
+    const asset = this.getUSDCAsset(isTestnet);
     const netPass = this.getNetworkPassphrase(isTestnet);
     const txn = new TransactionBuilder(account, {
       fee: this.stellarConfig.base_fee,
@@ -169,7 +181,7 @@ export class StellarService {
 
     txn.sign(keypair);
     try {
-      const response: HorizonApi.SubmitTransactionResponse =
+      const response: Horizon.HorizonApi.SubmitTransactionResponse =
         await server.submitTransaction(txn);
       return {
         txHash: response.hash,
@@ -178,7 +190,7 @@ export class StellarService {
       };
     } catch (error) {
       this.logger.error(
-        `Error addProsperTrustLine failed, xdr: ${txn.toXDR()}, error: `,
+        `Error addUSDCTrustLine failed, xdr: ${txn.toXDR()}, error: `,
         error,
       );
       throw new BadRequestException('Error adding trustline to PROSPER');
@@ -210,7 +222,7 @@ export class StellarService {
 
       txn.sign(issuer);
       try {
-        const response: HorizonApi.SubmitTransactionResponse =
+        const response: Horizon.HorizonApi.SubmitTransactionResponse =
           await server.submitTransaction(txn);
         return {
           txHash: response.hash,
@@ -243,7 +255,7 @@ export class StellarService {
     const keypair = Keypair.random();
     try {
       await this.createAccountWithBalance(keypair, isTestnet);
-      const response = await this.addProsperTrustLine(keypair, isTestnet);
+      const response = await this.addUSDCTrustLine(keypair, isTestnet);
       return {
         publicKey: keypair.publicKey(),
         secretKey: keypair.secret(),
@@ -262,7 +274,7 @@ export class StellarService {
     try {
       await this.createAccountWithBalance(treasury, isTestnet);
       // Treasury must trust the issuer to receive PROSPER
-      await this.addProsperTrustLine(treasury, isTestnet);
+      await this.addUSDCTrustLine(treasury, isTestnet);
       return {
         publicKey: treasury.publicKey(),
         secretKey: treasury.secret(),
@@ -282,7 +294,7 @@ export class StellarService {
       const server = this.getServer(isTestnet);
       const issuer = Keypair.fromSecret(issuerSecret);
       const issuerAccount = await server.loadAccount(issuer.publicKey());
-      const prosperAsset = this.getProsperAsset(isTestnet);
+      const prosperAsset = this.getUSDCAsset(isTestnet);
       const netPass = this.getNetworkPassphrase(isTestnet);
 
       const txn = new TransactionBuilder(issuerAccount, {
@@ -300,7 +312,7 @@ export class StellarService {
         .build();
 
       txn.sign(issuer);
-      const response: HorizonApi.SubmitTransactionResponse =
+      const response: Horizon.HorizonApi.SubmitTransactionResponse =
         await server.submitTransaction(txn);
       return {
         txHash: response.hash,
@@ -322,39 +334,39 @@ export class StellarService {
       const account = await server.loadAccount(address);
 
       let balanceXLM = '0';
-      let balanceProsper = '0';
+      let balanceUSDC = '0';
 
-      const prosperIssuer = isTestnet
-        ? this.stellarConfig.prosper_issuer_address
-        : this.stellarConfig.prosper_issuer_address_prod;
-      const prosperPublicKey = Keypair.fromSecret(prosperIssuer).publicKey();
+      const usdcIssuer = isTestnet
+        ? this.stellarConfig.usdc_issuer_address
+        : this.stellarConfig.usdc_issuer_address_prod;
+      const usdcPublicKey = Keypair.fromSecret(usdcIssuer).publicKey();
       for (const b of account.balances) {
         if (b.asset_type === 'native') {
           balanceXLM = b.balance;
         } else {
           const assetCode = (b as any).asset_code;
           const assetIssuer = (b as any).asset_issuer;
-          if (assetCode === 'PROSPER' && assetIssuer === prosperPublicKey) {
-            balanceProsper = b.balance;
+          if (assetCode === 'USDC' && assetIssuer === usdcPublicKey) {
+            balanceUSDC = b.balance;
           }
         }
       }
 
-      return { address, balanceXLM, balanceProsper };
+      return { address, balanceXLM, balanceUSDC };
     } catch (error) {
       this.logger.error(`Error fetching account balances, error: `, error);
       throw new BadRequestException('Error fetching account balances');
     }
   }
 
-  public async makeProsperTransaction(
+  public async makeUSDCTransaction(
     payload: MakeProsperTransactionDto,
   ): Promise<MakeProsperTransactionResponse> {
     try {
       const { sourcePrivateKey, receiverPublicKey, amount, isTestnet, memo } =
         payload;
       const server = this.getServer(isTestnet);
-      const asset = this.getProsperAsset(isTestnet);
+      const asset = this.getUSDCAsset(isTestnet);
       const memoText = memo || ' ';
 
       // verify receiver has PROSPER trustline
@@ -379,7 +391,7 @@ export class StellarService {
         .build();
 
       txn.sign(sourceKeys);
-      const response: HorizonApi.SubmitTransactionResponse =
+      const response: Horizon.HorizonApi.SubmitTransactionResponse =
         await server.submitTransaction(txn);
       return {
         txHash: response.hash,
@@ -392,126 +404,3 @@ export class StellarService {
     }
   }
 }
-/*
-
-  public async verifyAccountProsper(
-    publicKey: string,
-    isTestnet: boolean,
-  ): Promise<void> {
-    const server = this.getServer(isTestnet);
-    try {
-      const account = await server.loadAccount(publicKey);
-      const prosperIssuer = isTestnet
-        ? this.stellarConfig.prosper_issuer_address
-        : this.stellarConfig.prosper_issuer_address_prod;
-
-      const hasProsper = account.balances.some((b: any) => {
-        if (b.asset_type === 'native') return false;
-        return b.asset_code === 'PROSPER' && b.asset_issuer === prosperIssuer;
-      });
-
-      if (!hasProsper) {
-        throw new NotFoundException(`${publicKey} Balance PROSPER Not Found!`);
-      }
-    } catch (error) {
-      this.logger.error(`Error verifying account Prosper: ${error}`);
-      throw new NotFoundException(`${publicKey} Not Found!`);
-    }
-  }
-
-
-  // Flags management for Non-Custodial issuers
-  public async setIssuerAuthFlags(
-    issuerSecret: string,
-    isTestnet: boolean,
-    requireAuth: boolean,
-    revocable: boolean,
-  ): Promise<{ txHash: string; successful: boolean }> {
-    const server = this.getServer(isTestnet);
-    const issuer = Keypair.fromSecret(issuerSecret);
-    const issuerAccount = await server.loadAccount(issuer.publicKey());
-    const netPass = this.getNetworkPassphrase(isTestnet);
-
-    let flags = 0;
-    if (requireAuth) flags |= AuthRequiredFlag;
-    if (revocable) flags |= AuthRevocableFlag;
-
-    const tx = new TransactionBuilder(issuerAccount, {
-      fee: this.stellarConfig.base_fee,
-    })
-      .addOperation(
-        Operation.setOptions({
-          setFlags: flags === 0 ? undefined : (flags as unknown as AuthFlag),
-        }),
-      )
-      .setNetworkPassphrase(netPass)
-      .setTimeout(this.stellarConfig.timeout)
-      .build();
-
-    tx.sign(issuer);
-    const res = await server.submitTransaction(tx);
-    return { txHash: res.hash, successful: res.successful };
-  }
-
-  public async authorizeTrustline(
-    issuerSecret: string,
-    trustorPublic: string,
-    assetCode: string,
-    isTestnet: boolean,
-  ): Promise<{ txHash: string; successful: boolean }> {
-    const server = this.getServer(isTestnet);
-    const issuer = Keypair.fromSecret(issuerSecret);
-    const issuerAccount = await server.loadAccount(issuer.publicKey());
-    const netPass = this.getNetworkPassphrase(isTestnet);
-
-    const tx = new TransactionBuilder(issuerAccount, {
-      fee: this.stellarConfig.base_fee,
-    })
-      .addOperation(
-        Operation.allowTrust({
-          trustor: trustorPublic,
-          assetCode,
-          authorize: true,
-        }),
-      )
-      .setNetworkPassphrase(netPass)
-      .setTimeout(this.stellarConfig.timeout)
-      .build();
-
-    tx.sign(issuer);
-    const res = await server.submitTransaction(tx);
-    return { txHash: res.hash, successful: res.successful };
-  }
-
-  public async clawback(
-    issuerSecret: string,
-    fromPublic: string,
-    amount: string,
-    isTestnet: boolean,
-  ): Promise<{ txHash: string; successful: boolean }> {
-    const server = this.getServer(isTestnet);
-    const issuer = Keypair.fromSecret(issuerSecret);
-    const issuerAccount = await server.loadAccount(issuer.publicKey());
-    const asset = this.getProsperAsset(isTestnet);
-    const netPass = this.getNetworkPassphrase(isTestnet);
-
-    const tx = new TransactionBuilder(issuerAccount, {
-      fee: this.stellarConfig.base_fee,
-    })
-      .addOperation(
-        Operation.clawback({
-          from: fromPublic,
-          asset,
-          amount,
-        }),
-      )
-      .setNetworkPassphrase(netPass)
-      .setTimeout(this.stellarConfig.timeout)
-      .build();
-
-    tx.sign(issuer);
-    const res = await server.submitTransaction(tx);
-    return { txHash: res.hash, successful: res.successful };
-  }
-}
-*/

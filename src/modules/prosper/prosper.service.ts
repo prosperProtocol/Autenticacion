@@ -303,6 +303,7 @@ export class ProsperService {
         throw new NotFoundException('Issuer wallet no encontrada en la DB');
       }
       const treasury = this.stellarService.getProsperTeasury(isTestnet);
+      this.logger.debug(`Treasury address: ${treasury ? treasury.publicKey() : 'N/A'}`);
       const [treasuryWallet] = await this.walletsService.findByFields({
         address: treasury.publicKey(),
       });

@@ -75,7 +75,7 @@ export class SorobanService {
         return null;
       }
       return sendTx.hash;
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(error);
       this.logger.error(
         `Error invoking Soroban contract: ${error.message}`,
@@ -110,8 +110,13 @@ export class SorobanService {
           return null;
         case 'SUCCESS':
           return finalStatus;
+        default:
+          this.logger.warn(
+            `Transaction pending or unknown status: ${JSON.stringify(finalStatus)}`,
+          );
+          return null;
       }
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(
         `Error getting result from Soroban contract: ${error.message}`,
         error.stack,

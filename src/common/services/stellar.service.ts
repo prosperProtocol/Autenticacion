@@ -75,7 +75,7 @@ export class StellarService {
         `USDC issuer address not defined for ${isTestnet ? 'testnet' : 'mainnet'}`,
       );
     }
-    return new Asset('USDC', Keypair.fromSecret(issuer).publicKey());
+    return new Asset('USDC', issuer);
   }
 
   public getProsperAsset(isTestnet: boolean): Asset {
@@ -100,7 +100,7 @@ export class StellarService {
       this.logger.warn(
         `PROSPER issuer address not defined for ${isTestnet ? 'testnet' : 'mainnet'}`,
       );
-      return;
+      throw new BadRequestException();
     }
     return Keypair.fromSecret(issuer);
   }
@@ -330,6 +330,9 @@ export class StellarService {
   ): Promise<GetAccountBalancesResponse> {
     try {
       const { address, isTestnet } = payload;
+      if (!isTestnet) {
+        throw new BadRequestException('Cannot query treasury account balance on mainnet');
+      }
       const server = this.getServer(isTestnet);
       const account = await server.loadAccount(address);
 
@@ -339,7 +342,7 @@ export class StellarService {
       const usdcIssuer = isTestnet
         ? this.stellarConfig.usdc_issuer_address
         : this.stellarConfig.usdc_issuer_address_prod;
-      const usdcPublicKey = Keypair.fromSecret(usdcIssuer).publicKey();
+      const usdcPublicKey = usdcIssuer;
       for (const b of account.balances) {
         if (b.asset_type === 'native') {
           balanceXLM = b.balance;

@@ -5,7 +5,7 @@ import {
   CallHandler,
 } from '@nestjs/common';
 import {Observable} from 'rxjs';
-import * as morgan from 'morgan';
+import morgan from 'morgan';
 
 @Injectable()
 export class LogInterceptor implements NestInterceptor {

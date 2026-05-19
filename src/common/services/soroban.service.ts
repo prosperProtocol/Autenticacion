@@ -4,6 +4,7 @@ import {
   Contract,
   Keypair,
   nativeToScVal,
+  scValToNative,
   Networks,
   TransactionBuilder,
 } from '@stellar/stellar-sdk';
@@ -26,9 +27,18 @@ export class SorobanService {
     return this.stellarConfig.is_testnet;
   }
 
-  public getTokenDetails(): { token: string; secret: string } {
+  public getSmartContractDetails(): {
+    locking: string;
+    token: string;
+    secret: string;
+  } {
+    const locking = this.stellarConfig.locking_contract_address;
     const token = this.stellarConfig.token_contract_address;
-    const secret = this.stellarConfig.token_contract_admin;
+    const secret = this.stellarConfig.smart_contract_admin;
+    if (!locking) {
+      this.logger.warn(`Verificar con Infra Variable de Entorno Locking`);
+      throw new BadRequestException();
+    }
     if (!token) {
       this.logger.warn(`Verificar con Infra Variable de Entorno Token`);
       throw new BadRequestException();
@@ -37,7 +47,7 @@ export class SorobanService {
       this.logger.warn(`Verificar con Infra Variable de Entorno Token Secret`);
       throw new BadRequestException();
     }
-    return { token, secret };
+    return { locking, token, secret };
   }
 
   private async invokeSorobanContract(
@@ -90,9 +100,7 @@ export class SorobanService {
     }
   }
 
-  public async getResultSorobanContract(
-    transactionHash: string,
-  ): Promise<Api.GetSuccessfulTransactionResponse | null> {
+  public async getResultSorobanContract(transactionHash: string): Promise<any> {
     try {
       const finalStatus = await this.sorobanServer.pollTransaction(
         transactionHash,
@@ -103,13 +111,30 @@ export class SorobanService {
       );
       switch (finalStatus.status) {
         case 'FAILED':
+          return {
+            status: finalStatus.status,
+            txHash: finalStatus.txHash,
+            returnValue: null,
+          };
         case 'NOT_FOUND':
           this.logger.warn(
             `Transaction failed with final status: ${finalStatus.status}`,
           );
           return null;
-        case 'SUCCESS':
-          return finalStatus;
+        case 'SUCCESS': {
+          let returnValue = undefined;
+          if (finalStatus.returnValue) {
+            this.logger.debug('Return value:', finalStatus.returnValue);
+            const nativeVal = scValToNative(finalStatus.returnValue);
+            returnValue =
+              typeof nativeVal === 'bigint' ? nativeVal.toString() : nativeVal;
+          }
+          return {
+            status: finalStatus.status,
+            txHash: finalStatus.txHash,
+            returnValue,
+          };
+        }
         default:
           this.logger.warn(
             `Transaction pending or unknown status: ${JSON.stringify(finalStatus)}`,

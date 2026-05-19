@@ -32,6 +32,9 @@ export class Wallets {
   prosperId: string;
 
   @Column({ type: 'varchar' })
+  cashin: string;
+
+  @Column({ type: 'varchar' })
   address: string;
 
   @Column({ type: 'varchar' })

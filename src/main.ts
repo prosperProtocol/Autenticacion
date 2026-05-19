@@ -18,6 +18,7 @@ import { AppModule } from 'src/app.module';
 import { LogInterceptor } from 'src/common/interceptors/LogInterceptor.interceptor';
 import { AuthModule } from 'src/modules/auth/auth.module';
 import { ProsperModule } from 'src/modules/prosper/prosper.module';
+import { AlfredModule } from './modules/alfred/alfred.module';
 
 async function bootstrap() {
   const logLevels: LogLevel[] = process.env.DEBBUGER
@@ -59,10 +60,10 @@ async function bootstrap() {
     .build();
 
   const externalDoc = SwaggerModule.createDocument(app, externalOptions, {
-    include: [AuthModule, ProsperModule],
+    include: [AuthModule, AlfredModule, ProsperModule],
   });
-    const yamlDataInt = yaml.dump(externalDoc);
-    fs.writeFileSync('./documentacion.yaml', yamlDataInt);
+  const yamlDataInt = yaml.dump(externalDoc);
+  fs.writeFileSync('./documentacion.yaml', yamlDataInt);
 
   const swaggerApi = 'api/docs';
   const theme = new SwaggerTheme();

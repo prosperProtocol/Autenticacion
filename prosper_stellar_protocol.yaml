@@ -33,6 +33,60 @@ paths:
         - bearer: []
       summary: Cambiar contraseña (protegido por JWT)
       tags: *ref_0
+  /api/v1/alfred/users:
+    post:
+      operationId: AlfredController_createUser
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserEmailDto'
+      responses:
+        '201':
+          description: ''
+      security: &ref_1
+        - bearer: []
+      summary: Crear usuario por correo electrónico
+      tags: &ref_2
+        - Alfred
+  /api/v1/alfred/cashin:
+    post:
+      operationId: AlfredController_cashin
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CashinDto'
+      responses:
+        '201':
+          description: ''
+      security: *ref_1
+      summary: Ejecutar cashin para un usuario
+      tags: *ref_2
+  /api/v1/alfred/staking:
+    get:
+      operationId: AlfredController_getStaking
+      parameters: []
+      responses:
+        '200':
+          description: ''
+      security: *ref_1
+      summary: Obtener todos los registros de staking con el email del propietario
+      tags: *ref_2
+  /api/v1/alfred/cron/trigger-cashin:
+    post:
+      operationId: AlfredController_triggerCashinCron
+      parameters: []
+      responses:
+        '201':
+          description: ''
+      security: *ref_1
+      summary: Ejecutar manualmente la validación y transferencia de USDC
+      tags: *ref_2
   /api/v1/transacciones:
     post:
       operationId: TransaccionesController_create
@@ -46,9 +100,9 @@ paths:
       responses:
         '201':
           description: ''
-      security: &ref_1
+      security: &ref_3
         - bearer: []
-      tags: &ref_2
+      tags: &ref_4
         - Transacciones
     get:
       operationId: TransaccionesController_findAll
@@ -56,8 +110,8 @@ paths:
       responses:
         '200':
           description: ''
-      security: *ref_1
-      tags: *ref_2
+      security: *ref_3
+      tags: *ref_4
   /api/v1/transacciones/{id}:
     get:
       operationId: TransaccionesController_findOne
@@ -70,8 +124,8 @@ paths:
       responses:
         '200':
           description: ''
-      security: *ref_1
-      tags: *ref_2
+      security: *ref_3
+      tags: *ref_4
     patch:
       operationId: TransaccionesController_update
       parameters: []
@@ -84,8 +138,8 @@ paths:
       responses:
         '200':
           description: ''
-      security: *ref_1
-      tags: *ref_2
+      security: *ref_3
+      tags: *ref_4
     delete:
       operationId: TransaccionesController_remove
       parameters:
@@ -97,8 +151,8 @@ paths:
       responses:
         '200':
           description: ''
-      security: *ref_1
-      tags: *ref_2
+      security: *ref_3
+      tags: *ref_4
   /api/v1/wallets:
     post:
       operationId: WalletsController_create
@@ -112,9 +166,9 @@ paths:
       responses:
         '201':
           description: ''
-      security: &ref_3
+      security: &ref_5
         - bearer: []
-      tags: &ref_4
+      tags: &ref_6
         - Wallets
     get:
       operationId: WalletsController_findAll
@@ -122,8 +176,8 @@ paths:
       responses:
         '200':
           description: ''
-      security: *ref_3
-      tags: *ref_4
+      security: *ref_5
+      tags: *ref_6
   /api/v1/wallets/{id}:
     get:
       operationId: WalletsController_findOne
@@ -136,8 +190,8 @@ paths:
       responses:
         '200':
           description: ''
-      security: *ref_3
-      tags: *ref_4
+      security: *ref_5
+      tags: *ref_6
     patch:
       operationId: WalletsController_update
       parameters:
@@ -155,8 +209,8 @@ paths:
       responses:
         '200':
           description: ''
-      security: *ref_3
-      tags: *ref_4
+      security: *ref_5
+      tags: *ref_6
     delete:
       operationId: WalletsController_remove
       parameters:
@@ -168,8 +222,8 @@ paths:
       responses:
         '200':
           description: ''
-      security: *ref_3
-      tags: *ref_4
+      security: *ref_5
+      tags: *ref_6
   /api/v1/prosper/funds:
     post:
       operationId: ProsperController_createFund
@@ -183,9 +237,9 @@ paths:
       responses:
         '201':
           description: ''
-      security: &ref_5
+      security: &ref_7
         - bearer: []
-      tags: &ref_6
+      tags: &ref_8
         - Prosper
   /api/v1/prosper/tokens/mint:
     post:
@@ -200,8 +254,8 @@ paths:
       responses:
         '201':
           description: ''
-      security: *ref_5
-      tags: *ref_6
+      security: *ref_7
+      tags: *ref_8
   /api/v1/prosper/assets:
     get:
       operationId: ProsperController_assets
@@ -209,8 +263,8 @@ paths:
       responses:
         '200':
           description: ''
-      security: *ref_5
-      tags: *ref_6
+      security: *ref_7
+      tags: *ref_8
   /api/v1/prosper/users/new:
     post:
       operationId: ProsperController_createUser
@@ -224,8 +278,8 @@ paths:
       responses:
         '201':
           description: ''
-      security: *ref_5
-      tags: *ref_6
+      security: *ref_7
+      tags: *ref_8
   /api/v1/prosper/users/deposit:
     post:
       operationId: ProsperController_deposit
@@ -239,8 +293,8 @@ paths:
       responses:
         '201':
           description: ''
-      security: *ref_5
-      tags: *ref_6
+      security: *ref_7
+      tags: *ref_8
   /api/v1/prosper/users/transfer:
     post:
       operationId: ProsperController_transfer
@@ -254,8 +308,8 @@ paths:
       responses:
         '201':
           description: ''
-      security: *ref_5
-      tags: *ref_6
+      security: *ref_7
+      tags: *ref_8
   /api/v1/prosper/users/retire:
     delete:
       operationId: ProsperController_retire
@@ -269,8 +323,8 @@ paths:
       responses:
         '200':
           description: ''
-      security: *ref_5
-      tags: *ref_6
+      security: *ref_7
+      tags: *ref_8
   /api/v1/prosper/users/{prosperId}/balances:
     get:
       operationId: ProsperController_userBalances
@@ -283,8 +337,8 @@ paths:
       responses:
         '200':
           description: ''
-      security: *ref_5
-      tags: *ref_6
+      security: *ref_7
+      tags: *ref_8
   /api/v1/prosper/users/{prosperId}/transactions:
     get:
       operationId: ProsperController_userTransactions
@@ -331,8 +385,435 @@ paths:
       responses:
         '200':
           description: ''
-      security: *ref_5
-      tags: *ref_6
+      security: *ref_7
+      tags: *ref_8
+  /api/v1/stellar/server:
+    get:
+      operationId: StellarController_getServer
+      parameters:
+        - name: isTestnet
+          required: true
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: ''
+      security: &ref_9
+        - bearer: []
+      summary: Obtener la URL del servidor Horizon
+      tags: &ref_10
+        - Stellar
+  /api/v1/stellar/network-passphrase:
+    get:
+      operationId: StellarController_getNetworkPassphrase
+      parameters:
+        - name: isTestnet
+          required: true
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: ''
+      security: *ref_9
+      summary: Obtener el passphrase de la red
+      tags: *ref_10
+  /api/v1/stellar/usdc-asset:
+    get:
+      operationId: StellarController_getUSDCAsset
+      parameters:
+        - name: isTestnet
+          required: true
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: ''
+      security: *ref_9
+      summary: Obtener el Asset USDC configurado
+      tags: *ref_10
+  /api/v1/stellar/prosper-asset:
+    get:
+      operationId: StellarController_getProsperAsset
+      parameters:
+        - name: isTestnet
+          required: true
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: ''
+      security: *ref_9
+      summary: Obtener el Asset PROSPER configurado
+      tags: *ref_10
+  /api/v1/stellar/prosper-issuer:
+    get:
+      operationId: StellarController_getProsperIssuer
+      parameters:
+        - name: isTestnet
+          required: true
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: ''
+      security: *ref_9
+      summary: Obtener la llave pública del issuer de PROSPER
+      tags: *ref_10
+  /api/v1/stellar/prosper-treasury:
+    get:
+      operationId: StellarController_getProsperTeasury
+      parameters:
+        - name: isTestnet
+          required: true
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: ''
+      security: *ref_9
+      summary: Obtener la llave pública del treasury de PROSPER
+      tags: *ref_10
+  /api/v1/stellar/create-account-with-balance:
+    post:
+      operationId: StellarController_createAccountWithBalance
+      parameters: []
+      responses:
+        '201':
+          description: ''
+      security: *ref_9
+      summary: Crear una cuenta con balance inicial
+      tags: *ref_10
+  /api/v1/stellar/add-usdc-trustline:
+    post:
+      operationId: StellarController_addUSDCTrustLine
+      parameters: []
+      responses:
+        '201':
+          description: ''
+      security: *ref_9
+      summary: Añadir trustline de USDC a una cuenta
+      tags: *ref_10
+  /api/v1/stellar/add-home-domain-to-issuer:
+    post:
+      operationId: StellarController_addHomeDomainToIssuer
+      parameters: []
+      responses:
+        '201':
+          description: ''
+      security: *ref_9
+      summary: Añadir un home domain al issuer
+      tags: *ref_10
+  /api/v1/stellar/is-testnet:
+    get:
+      operationId: StellarController_getIsTestnet
+      parameters: []
+      responses:
+        '200':
+          description: ''
+      security: *ref_9
+      summary: Verificar si el entorno está configurado para testnet
+      tags: *ref_10
+  /api/v1/stellar/create-user-wallet:
+    post:
+      operationId: StellarController_createUserWallet
+      parameters: []
+      responses:
+        '201':
+          description: ''
+      security: *ref_9
+      summary: Crear una nueva billetera de usuario
+      tags: *ref_10
+  /api/v1/stellar/create-prosper-treasury:
+    post:
+      operationId: StellarController_createProsperTreasury
+      parameters: []
+      responses:
+        '201':
+          description: ''
+      security: *ref_9
+      summary: Crear la cuenta treasury de PROSPER
+      tags: *ref_10
+  /api/v1/stellar/issue-prosper-to-treasury:
+    post:
+      operationId: StellarController_issueProsperToTreasury
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IssueProsperToTreasuryDto'
+      responses:
+        '201':
+          description: ''
+      security: *ref_9
+      summary: Emitir PROSPER al treasury
+      tags: *ref_10
+  /api/v1/stellar/account-balances:
+    post:
+      operationId: StellarController_getAccountBalances
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GetAccountBalancesDto'
+      responses:
+        '201':
+          description: ''
+      security: *ref_9
+      summary: Obtener los balances de una cuenta
+      tags: *ref_10
+  /api/v1/stellar/make-usdc-transaction:
+    post:
+      operationId: StellarController_makeUSDCTransaction
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MakeProsperTransactionDto'
+      responses:
+        '201':
+          description: ''
+      security: *ref_9
+      summary: Realizar una transacción de USDC/PROSPER
+      tags: *ref_10
+  /api/v1/soroban/check-network:
+    get:
+      operationId: SorobanController_checkNetwork
+      parameters: []
+      responses:
+        '200':
+          description: ''
+      security: &ref_11
+        - bearer: []
+      summary: Verificar la red (testnet o mainnet)
+      tags: &ref_12
+        - Soroban
+  /api/v1/soroban/smart-contract-details:
+    get:
+      operationId: SorobanController_getSmartContractDetails
+      parameters: []
+      responses:
+        '200':
+          description: ''
+      security: *ref_11
+      summary: Obtener detalles del smart contract
+      tags: *ref_12
+  /api/v1/soroban/result-contract:
+    get:
+      operationId: SorobanController_getResultSorobanContract
+      parameters:
+        - name: transactionHash
+          required: true
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ''
+      security: *ref_11
+      summary: Obtener el resultado de un contrato Soroban
+      tags: *ref_12
+  /api/v1/soroban/set-pct:
+    post:
+      operationId: SorobanController_setPct
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sourceSecret:
+                  type: string
+                contractId:
+                  type: string
+                pct:
+                  type: number
+      responses:
+        '201':
+          description: ''
+      security: *ref_11
+      summary: Configurar un porcentaje de rendimiento
+      tags: *ref_12
+  /api/v1/soroban/set-strat:
+    post:
+      operationId: SorobanController_setStrat
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sourceSecret:
+                  type: string
+                contractId:
+                  type: string
+                user:
+                  type: string
+                amount:
+                  type: string
+      responses:
+        '201':
+          description: ''
+      security: *ref_11
+      summary: Establecer o inicializar una estrategia de staking
+      tags: *ref_12
+  /api/v1/soroban/end-stkg:
+    post:
+      operationId: SorobanController_endStkg
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sourceSecret:
+                  type: string
+                contractId:
+                  type: string
+                user:
+                  type: string
+      responses:
+        '201':
+          description: ''
+      security: *ref_11
+      summary: Verificar y finaliza la estrategia de staking
+      tags: *ref_12
+  /api/v1/soroban/get-apy:
+    post:
+      operationId: SorobanController_getApy
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sourceSecret:
+                  type: string
+                contractId:
+                  type: string
+                user:
+                  type: string
+      responses:
+        '201':
+          description: ''
+      security: *ref_11
+      summary: Consultar el contrato de distribución para obtener el APY
+      tags: *ref_12
+  /api/v1/soroban/accrue:
+    post:
+      operationId: SorobanController_accrue
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sourceSecret:
+                  type: string
+                contractId:
+                  type: string
+                user:
+                  type: string
+                amount:
+                  type: string
+      responses:
+        '201':
+          description: ''
+      security: *ref_11
+      summary: Añadir o acumular rendimiento/fondos
+      tags: *ref_12
+  /api/v1/soroban/set-s-exp:
+    post:
+      operationId: SorobanController_setSExp
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sourceSecret:
+                  type: string
+                contractId:
+                  type: string
+                user:
+                  type: string
+      responses:
+        '201':
+          description: ''
+      security: *ref_11
+      summary: Cambiar el estado de la estrategia a Expirada
+      tags: *ref_12
+  /api/v1/soroban/set-s-cmp:
+    post:
+      operationId: SorobanController_setSCmp
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sourceSecret:
+                  type: string
+                contractId:
+                  type: string
+                user:
+                  type: string
+      responses:
+        '201':
+          description: ''
+      security: *ref_11
+      summary: Cambiar el estado de la estrategia a Completada
+      tags: *ref_12
+  /api/v1/soroban/withdraw:
+    post:
+      operationId: SorobanController_withdraw
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sourceSecret:
+                  type: string
+                contractId:
+                  type: string
+                amount:
+                  type: string
+                user:
+                  type: string
+      responses:
+        '201':
+          description: ''
+      security: *ref_11
+      summary: Ejecutar el retiro de fondos o rendimientos
+      tags: *ref_12
 info:
   title: APIs Prosper - Stellar Protocol Internal
   description: APIs Prosper - Stellar Protocol internal documentation
@@ -375,6 +856,30 @@ components:
       required:
         - oldPassword
         - newPassword
+    CreateUserEmailDto:
+      type: object
+      properties:
+        email:
+          type: string
+      required:
+        - email
+    CashinDto:
+      type: object
+      properties:
+        alfredEmail:
+          type: string
+        cashin:
+          type: string
+          enum:
+            - end
+            - month
+          description: >-
+            selecciona la forma de liquidación de la ganancia (a) al final del
+            periodo `end` (b) liquidación de ganancia mes a mes `month`
+          example: end
+      required:
+        - alfredEmail
+        - cashin
     CreateTransaccionDto:
       type: object
       properties:
@@ -493,6 +998,9 @@ components:
         secret:
           type: string
           description: Wallet secret
+        cashin:
+          type: string
+          description: Cashin type
         balances:
           description: Balances array
           type: array
@@ -516,6 +1024,9 @@ components:
         id:
           type: number
           description: Wallet id
+        cashin:
+          type: string
+          description: Cashin type
         balances:
           description: Balances array
           type: array
@@ -617,3 +1128,53 @@ components:
         - fromUserId
         - toUserId
         - prosperTxId
+    IssueProsperToTreasuryDto:
+      type: object
+      properties:
+        issuerSecret:
+          type: string
+          description: Secret del issuer que emite PROSPER
+        treasuryPublic:
+          type: string
+          description: Dirección pública del treasury destino
+        amount:
+          type: string
+          description: Cantidad a emitir (string)
+      required:
+        - issuerSecret
+        - treasuryPublic
+        - amount
+    GetAccountBalancesDto:
+      type: object
+      properties:
+        address:
+          type: string
+          description: Dirección/de cuenta a consultar
+        isTestnet:
+          type: boolean
+          description: Si la consulta es sobre testnet (opcional, por defecto true)
+      required:
+        - address
+    MakeProsperTransactionDto:
+      type: object
+      properties:
+        sourcePrivateKey:
+          type: string
+          description: Secret key del emisor (source) que firma la transacción
+        receiverPublicKey:
+          type: string
+          description: Public key del receptor
+        amount:
+          type: string
+          description: Cantidad a transferir (string o number en cadena)
+        isTestnet:
+          type: boolean
+          description: Si la operación es sobre testnet
+        memo:
+          type: string
+          description: Memo opcional
+      required:
+        - sourcePrivateKey
+        - receiverPublicKey
+        - amount
+        - isTestnet

@@ -294,38 +294,48 @@ export class ProsperService {
     this.logger.debug('getAssets called');
     try {
       const isTestnet = await this.stellarService.getIsTestnet();
+      // this.logger.debug(`isTestnet: ${JSON.stringify(isTestnet)}`);
       const assetCode = this.stellarService.getUSDCAsset(isTestnet);
+      // this.logger.debug(`assetCode: ${JSON.stringify(assetCode)}`);
       const issuer = this.stellarService.getProsperIssuer(isTestnet);
+      // this.logger.debug(`issuer: ${JSON.stringify(issuer)}`);
       const [issuerWallet] = await this.walletsService.findByFields({
         address: issuer.publicKey(),
       });
+      // this.logger.debug(`issuerWallet: ${JSON.stringify(issuerWallet)}`);
       if (!issuerWallet) {
         throw new NotFoundException('Issuer wallet no encontrada en la DB');
       }
       const treasury = this.stellarService.getProsperTeasury(isTestnet);
-      this.logger.debug(`Treasury address: ${treasury ? treasury.publicKey() : 'N/A'}`);
+      // this.logger.debug(`treasury: ${JSON.stringify(treasury)}`);
       const [treasuryWallet] = await this.walletsService.findByFields({
         address: treasury.publicKey(),
       });
       if (!treasuryWallet) {
         throw new NotFoundException('Treasury wallet no encontrada en la DB');
       }
-      const balance = await this.stellarService.getAccountBalances({
+      const balanceTreasury = await this.stellarService.getAccountBalances({
         address: treasury.publicKey(),
         isTestnet,
       });
-      return {
+      const balanceIssuer = await this.stellarService.getAccountBalances({
+        address: issuer.publicKey(),
+        isTestnet,
+      });
+      const result = {
         issue: {
           prosperId: issuerWallet.prosperId,
           address: issuer.publicKey(),
-          assetCode: assetCode.code,
+          balanceUSDC: balanceIssuer.balanceUSDC,
         },
         treasury: {
           prosperId: treasuryWallet.prosperId,
           address: treasury.publicKey(),
-          balance: balance.balanceUSDC,
+          balanceUSDC: balanceTreasury.balanceUSDC,
         },
       };
+      // this.logger.debug(`Flujo variables: ${JSON.stringify(result)}`);
+      return result;
     } catch (error) {
       this.logger.error(
         `Error en getAssets: `,
@@ -361,13 +371,13 @@ export class ProsperService {
           address: newWallet.publicKey(),
           secret: newWallet.secret(),
         });
-        this.logger.debug(
-          `New wallet created for userReferenceId ${userReferenceId}: ` +
-            `address ${newWallet.publicKey()}`,
-        );
-        if (isTestnet) {
-          this.logger.debug(`secret: ${newWallet.secret()}`);
-        }
+        // this.logger.debug(
+        //   `New wallet created for userReferenceId ${userReferenceId}: ` +
+        //     `address ${newWallet.publicKey()}`,
+        // );
+        // if (isTestnet) {
+        //   this.logger.debug(`secret: ${newWallet.secret()}`);
+        // }
       }
       return this.getBalance(userReferenceId);
     } catch (error) {

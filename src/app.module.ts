@@ -7,10 +7,12 @@ import config from 'src/common/config/config';
 import stellarConfig from 'src/common/config/stellar.config';
 import { DatabaseModule } from 'src/common/database.module';
 import { AuthModule } from 'src/modules/auth/auth.module';
+import { CommonModule } from 'src/modules/common/common.module';
 import { JwtGuard } from 'src/modules/auth/auth-jwt.guard';
 import { ProsperModule } from 'src/modules/prosper/prosper.module';
 import { TransaccionesModule } from 'src/modules/transacciones/transacciones.module';
 import { WalletsModule } from 'src/modules/wallets/wallets.module';
+import { AlfredModule } from './modules/alfred/alfred.module';
 
 @Module({
   imports: [
@@ -20,11 +22,13 @@ import { WalletsModule } from 'src/modules/wallets/wallets.module';
       isGlobal: true,
     }),
     AuthModule,
+    AlfredModule,
     DatabaseModule,
     ScheduleModule.forRoot(),
     TransaccionesModule,
     WalletsModule,
     ProsperModule,
+    CommonModule,
   ],
   providers: [
     {

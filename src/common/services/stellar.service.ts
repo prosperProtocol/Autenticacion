@@ -330,11 +330,11 @@ export class StellarService {
   ): Promise<GetAccountBalancesResponse> {
     try {
       const { address, isTestnet } = payload;
-      if (!isTestnet) {
-        throw new BadRequestException('Cannot query treasury account balance on mainnet');
-      }
+      this.logger.debug(`address: ${address}, isTestnet: ${isTestnet}`);
       const server = this.getServer(isTestnet);
+      this.logger.debug(`server: ${JSON.stringify(server)}`);
       const account = await server.loadAccount(address);
+      this.logger.debug(`account: ${JSON.stringify(account)}`);
 
       let balanceXLM = '0';
       let balanceUSDC = '0';
@@ -342,7 +342,9 @@ export class StellarService {
       const usdcIssuer = isTestnet
         ? this.stellarConfig.usdc_issuer_address
         : this.stellarConfig.usdc_issuer_address_prod;
+      this.logger.debug(`usdcIssuer: ${JSON.stringify(usdcIssuer)}`);
       const usdcPublicKey = usdcIssuer;
+      this.logger.debug(`usdcPublicKey: ${JSON.stringify(usdcPublicKey)}`);
       for (const b of account.balances) {
         if (b.asset_type === 'native') {
           balanceXLM = b.balance;
@@ -356,7 +358,11 @@ export class StellarService {
       }
 
       return { address, balanceXLM, balanceUSDC };
-    } catch (error) {
+    } catch (error: any) {
+      if (error?.response?.status === 404) {
+        this.logger.warn(`Account ${payload.address} not found (unfunded). Returning 0 balances.`);
+        return { address: payload.address, balanceXLM: '0', balanceUSDC: '0' };
+      }
       this.logger.error(`Error fetching account balances, error: `, error);
       throw new BadRequestException('Error fetching account balances');
     }

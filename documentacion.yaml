@@ -33,6 +33,60 @@ paths:
         - bearer: []
       summary: Cambiar contraseña (protegido por JWT)
       tags: *ref_0
+  /api/v1/alfred/users:
+    post:
+      operationId: AlfredController_createUser
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserEmailDto'
+      responses:
+        '201':
+          description: ''
+      security: &ref_1
+        - bearer: []
+      summary: Crear usuario por correo electrónico
+      tags: &ref_2
+        - Alfred
+  /api/v1/alfred/cashin:
+    post:
+      operationId: AlfredController_cashin
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CashinDto'
+      responses:
+        '201':
+          description: ''
+      security: *ref_1
+      summary: Ejecutar cashin para un usuario
+      tags: *ref_2
+  /api/v1/alfred/staking:
+    get:
+      operationId: AlfredController_getStaking
+      parameters: []
+      responses:
+        '200':
+          description: ''
+      security: *ref_1
+      summary: Obtener todos los registros de staking con el email del propietario
+      tags: *ref_2
+  /api/v1/alfred/cron/trigger-cashin:
+    post:
+      operationId: AlfredController_triggerCashinCron
+      parameters: []
+      responses:
+        '201':
+          description: ''
+      security: *ref_1
+      summary: Ejecutar manualmente la validación y transferencia de USDC
+      tags: *ref_2
   /api/v1/prosper/funds:
     post:
       operationId: ProsperController_createFund
@@ -46,9 +100,9 @@ paths:
       responses:
         '201':
           description: ''
-      security: &ref_1
+      security: &ref_3
         - bearer: []
-      tags: &ref_2
+      tags: &ref_4
         - Prosper
   /api/v1/prosper/tokens/mint:
     post:
@@ -63,8 +117,8 @@ paths:
       responses:
         '201':
           description: ''
-      security: *ref_1
-      tags: *ref_2
+      security: *ref_3
+      tags: *ref_4
   /api/v1/prosper/assets:
     get:
       operationId: ProsperController_assets
@@ -72,8 +126,8 @@ paths:
       responses:
         '200':
           description: ''
-      security: *ref_1
-      tags: *ref_2
+      security: *ref_3
+      tags: *ref_4
   /api/v1/prosper/users/new:
     post:
       operationId: ProsperController_createUser
@@ -87,8 +141,8 @@ paths:
       responses:
         '201':
           description: ''
-      security: *ref_1
-      tags: *ref_2
+      security: *ref_3
+      tags: *ref_4
   /api/v1/prosper/users/deposit:
     post:
       operationId: ProsperController_deposit
@@ -102,8 +156,8 @@ paths:
       responses:
         '201':
           description: ''
-      security: *ref_1
-      tags: *ref_2
+      security: *ref_3
+      tags: *ref_4
   /api/v1/prosper/users/transfer:
     post:
       operationId: ProsperController_transfer
@@ -117,8 +171,8 @@ paths:
       responses:
         '201':
           description: ''
-      security: *ref_1
-      tags: *ref_2
+      security: *ref_3
+      tags: *ref_4
   /api/v1/prosper/users/retire:
     delete:
       operationId: ProsperController_retire
@@ -132,8 +186,8 @@ paths:
       responses:
         '200':
           description: ''
-      security: *ref_1
-      tags: *ref_2
+      security: *ref_3
+      tags: *ref_4
   /api/v1/prosper/users/{prosperId}/balances:
     get:
       operationId: ProsperController_userBalances
@@ -146,8 +200,8 @@ paths:
       responses:
         '200':
           description: ''
-      security: *ref_1
-      tags: *ref_2
+      security: *ref_3
+      tags: *ref_4
   /api/v1/prosper/users/{prosperId}/transactions:
     get:
       operationId: ProsperController_userTransactions
@@ -194,8 +248,8 @@ paths:
       responses:
         '200':
           description: ''
-      security: *ref_1
-      tags: *ref_2
+      security: *ref_3
+      tags: *ref_4
 info:
   title: APIs Prosper - Stellar Protocol
   description: APIs Prosper - Stellar Protocol documentation
@@ -238,6 +292,30 @@ components:
       required:
         - oldPassword
         - newPassword
+    CreateUserEmailDto:
+      type: object
+      properties:
+        email:
+          type: string
+      required:
+        - email
+    CashinDto:
+      type: object
+      properties:
+        alfredEmail:
+          type: string
+        cashin:
+          type: string
+          enum:
+            - end
+            - month
+          description: >-
+            selecciona la forma de liquidación de la ganancia (a) al final del
+            periodo `end` (b) liquidación de ganancia mes a mes `month`
+          example: end
+      required:
+        - alfredEmail
+        - cashin
     CreateFundDto:
       type: object
       properties:

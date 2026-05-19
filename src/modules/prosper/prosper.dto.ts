@@ -211,7 +211,7 @@ export class IssueDto {
 
   @ApiProperty()
   @IsString()
-  assetCode: string;
+  balanceUSDC: string;
 }
 
 export class TreasuryDto {
@@ -225,7 +225,7 @@ export class TreasuryDto {
 
   @ApiProperty()
   @IsString()
-  balance: string;
+  balanceUSDC: string;
 }
 
 export class GetAssetsResponse {

@@ -30,6 +30,7 @@ export class BalancesDto {
   @IsOptional()
   @IsDate()
   updatedAt?: Date;
+
 }
 
 export class CreateWalletDto {
@@ -44,6 +45,15 @@ export class CreateWalletDto {
   @ApiProperty({ type: String, description: 'Wallet secret' })
   @IsString()
   secret: string;
+
+  @ApiProperty({
+    type: String,
+    description: 'Cashin type',
+    required: false,
+  })
+  @IsOptional()
+  @IsEnum(['end', 'month'])
+  cashin?: 'end' | 'month';
 
   @ApiProperty({
     type: () => BalancesDto,
@@ -74,6 +84,15 @@ export class UpdateWalletDto {
   id!: number;
 
   @ApiProperty({
+    type: String,
+    description: 'Cashin type',
+    required: false,
+  })
+  @IsOptional()
+  @IsEnum(['end', 'month'])
+  cashin?: 'end' | 'month';
+
+  @ApiProperty({
     type: () => BalancesDto,
     isArray: true,
     description: 'Balances array',
@@ -93,4 +112,3 @@ export class UpdateWalletDto {
   @IsEnum(WalletStatus)
   status?: WalletStatus;
 }
-

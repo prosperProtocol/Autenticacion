@@ -130,6 +130,15 @@ export class GetAccountBalancesDto {
   isTestnet?: boolean = true;
 }
 
+export class PublicKeyDto {
+  @ApiProperty({
+    description: 'Llave pública',
+  })
+  @IsString()
+  @IsNotEmpty()
+  publicKey: string;
+}
+
 export class GetAccountBalancesResponse {
   @ApiProperty({
     description: 'Dirección consultada',
@@ -151,9 +160,38 @@ export class GetAccountBalancesResponse {
   @IsString()
   @IsNotEmpty()
   balanceUSDC: string;
+
+  @ApiProperty({
+    description: 'Balance en ARSa como string',
+  })
+  @IsString()
+  @IsNotEmpty()
+  balanceARSA: string;
+
+  @ApiProperty({
+    description: 'Balance en USDC Prosper (Soroban/Asset) como string',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  balanceUSDCprosper?: string;
 }
 
 export class MakeProsperTransactionDto {
+  @ApiProperty({
+    description: 'Tipo de moneda a transferir',
+  })
+  @IsString()
+  @IsNotEmpty()
+  asset: 'USDC' | 'ARSa';
+
+  @ApiProperty({
+    description: 'Public key del emisor (source) que firma la transacción',
+  })
+  @IsString()
+  @IsNotEmpty()
+  sourcePublicKey: string;
+
   @ApiProperty({
     description: 'Secret key del emisor (source) que firma la transacción',
   })

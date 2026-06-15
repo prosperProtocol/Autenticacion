@@ -8,91 +8,102 @@ import {
   IsPositive,
   IsNotEmpty,
 } from 'class-validator';
+import { InteresCada24Horas, ProximaFechaMonto } from 'src/entities/staking.entity';
 
 export class CreateStakingDto {
-  @ApiProperty({
-    description: 'Identificador único de la posición de staking',
-    type: String,
-  })
+  @ApiProperty({ description: 'Email del usuario' })
   @IsString()
   @IsNotEmpty()
-  hash: string;
+  email!: string;
 
-  @ApiProperty({
-    description: 'La cuenta de Stellar del usuario titular',
-    type: String,
-  })
+  @ApiProperty({ description: 'Wallet o cuenta de Stellar del usuario' })
   @IsString()
   @IsNotEmpty()
-  owner: string;
+  wallet!: string;
 
-  @ApiProperty({
-    description: 'El monto de capital inicial bloqueado',
-    type: Number,
-  })
+  @ApiProperty({ description: 'Hash del depósito' })
+  @IsString()
+  @IsNotEmpty()
+  hashDeposito!: string;
+
+  @ApiProperty({ description: 'Hash de la transacción de staking' })
+  @IsString()
+  @IsNotEmpty()
+  hashStaking!: string;
+
+  @ApiProperty({ description: 'Memo de la transacción de staking' })
   @IsNumber()
   @IsPositive()
-  principalAmount: number;
+  memoStaking!: number;
 
-  @ApiProperty({
-    description: 'Fecha y hora de inicio de la posición',
-    type: String,
-    format: 'date-time',
-  })
+  @ApiProperty({ description: 'Monto de capital inicial bloqueado' })
+  @IsNumber()
+  @IsPositive()
+  principalAmount!: number;
+
+  @ApiProperty({ description: 'Fecha y hora de inicio de la posición', format: 'date-time' })
   @IsDateString()
-  start: string;
+  start!: string;
 
-  @ApiProperty({
-    description: 'Fecha de vencimiento del capital principal',
-    type: String,
-    format: 'date-time',
-  })
+  @ApiProperty({ description: 'Fecha de vencimiento del capital principal', format: 'date-time' })
   @IsDateString()
-  maturityPrincipal: string;
+  maturityPrincipal!: string;
 
-  @ApiPropertyOptional({
-    description: 'Cronograma de pagos de la renta/interés',
-    type: [String],
-  })
+  @ApiPropertyOptional({ description: 'Cronograma de pagos de la renta/interés' })
   @IsOptional()
   @IsArray()
   scheduleInterest?: any[];
 
-  @ApiProperty({ description: 'La tasa de interés pactada', type: Number })
+  @ApiProperty({ description: 'Porcentaje anual' })
   @IsNumber()
-  rate: number;
+  porcentajeAnual!: number;
 
-  @ApiProperty({
-    description: 'Identificador del activo en el que se pagará el interés',
-    type: String,
-  })
+  @ApiProperty({ description: 'Identificador del activo en el que se devolverá el capital' })
   @IsString()
   @IsNotEmpty()
-  payoutAssetInterest: string;
+  payoutAssetPrincipal!: string;
 
-  @ApiProperty({
-    description: 'Identificador del activo en el que se devolverá el capital',
-    type: String,
-  })
+  @ApiProperty({ description: 'Identificador del activo en el que se pagará el interés' })
   @IsString()
   @IsNotEmpty()
-  payoutAssetPrincipal: string;
+  payoutAssetInterest!: string;
 
-  @ApiPropertyOptional({
-    description: 'Cantidad total de intereses reclamados',
-    type: Number,
-    default: 0,
-  })
+  @ApiProperty({ description: 'Identificador del token de interés' })
+  @IsString()
+  @IsNotEmpty()
+  tokenInteres!: string;
+
+  @ApiPropertyOptional({ description: 'Cantidad total de intereses reclamados', default: 0 })
   @IsOptional()
   @IsNumber()
   claimedInterest?: number;
 
-  @ApiPropertyOptional({
-    description: 'Monto del capital principal devuelto',
-    type: Number,
-    default: 0,
-  })
+  @ApiPropertyOptional({ description: 'Intereses acumulados', default: 0 })
+  @IsOptional()
+  @IsNumber()
+  interesesAcumulados?: number;
+
+  @ApiPropertyOptional({ description: 'Monto proyectado', default: 0 })
+  @IsOptional()
+  @IsNumber()
+  proyectado?: number;
+
+  @ApiProperty({ description: 'ID del contrato' })
+  @IsString()
+  @IsNotEmpty()
+  contractoId!: string;
+
+  @ApiPropertyOptional({ description: 'Monto del capital principal devuelto', default: 0 })
   @IsOptional()
   @IsNumber()
   principalRedeemed?: number;
+
+  @ApiPropertyOptional({ description: 'Próxima fecha y monto' })
+  @IsOptional()
+  proximaFechaMonto?: ProximaFechaMonto;
+
+  @ApiPropertyOptional({ description: 'Interés cada 24 horas' })
+  @IsOptional()
+  @IsArray()
+  interesCada24Horas?: InteresCada24Horas[];
 }

@@ -38,6 +38,10 @@ export class CreateWalletDto {
   @IsString()
   prosperId: string;
 
+  @ApiProperty({ type: String, description: 'Prosper type' })
+  @IsString()
+  prosperType: string;
+
   @ApiProperty({ type: String, description: 'Wallet address' })
   @IsString()
   address: string;

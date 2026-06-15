@@ -21,11 +21,32 @@ export class StakingService {
     return await this.stakingRepository.save(staking);
   }
 
+  async update(id: number, updateData: Partial<Staking>): Promise<Staking> {
+    const staking = await this.stakingRepository.preload({
+      id,
+      ...updateData,
+    });
+    if (!staking) {
+      throw new Error(`Staking con id ${id} no encontrado`);
+    }
+    return await this.stakingRepository.save(staking);
+  }
+
   async findAll(): Promise<Staking[]> {
-    return await this.stakingRepository.find();
+    return await this.stakingRepository.find({
+      order: {
+        id: 'DESC',
+      },
+    });
   }
 
   async findOne(id: number): Promise<Staking | null> {
     return await this.stakingRepository.findOne({ where: { id } });
+  }
+
+  async findbyHash(hash: string): Promise<Staking | null> {
+    return await this.stakingRepository.findOne({
+      where: { hashDeposito: hash },
+    });
   }
 }

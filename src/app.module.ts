@@ -5,29 +5,30 @@ import { ScheduleModule } from '@nestjs/schedule';
 
 import config from 'src/common/config/config';
 import stellarConfig from 'src/common/config/stellar.config';
+import arsaConfig from 'src/common/config/arsa.config';
 import { DatabaseModule } from 'src/common/database.module';
 import { AuthModule } from 'src/modules/auth/auth.module';
 import { CommonModule } from 'src/modules/common/common.module';
 import { JwtGuard } from 'src/modules/auth/auth-jwt.guard';
-import { ProsperModule } from 'src/modules/prosper/prosper.module';
 import { TransaccionesModule } from 'src/modules/transacciones/transacciones.module';
 import { WalletsModule } from 'src/modules/wallets/wallets.module';
-import { AlfredModule } from './modules/alfred/alfred.module';
+import { CronJobsModule } from './modules/cron-jobs/cron-jobs.module';
+import { CMSModule } from './modules/cms/cms.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       envFilePath: '.env',
-      load: [config, stellarConfig],
+      load: [config, stellarConfig, arsaConfig],
       isGlobal: true,
     }),
     AuthModule,
-    AlfredModule,
+    CMSModule,
     DatabaseModule,
     ScheduleModule.forRoot(),
     TransaccionesModule,
     WalletsModule,
-    ProsperModule,
+    // CronJobsModule,
     CommonModule,
   ],
   providers: [
@@ -37,4 +38,4 @@ import { AlfredModule } from './modules/alfred/alfred.module';
     },
   ],
 })
-export class AppModule {}
+export class AppModule { }

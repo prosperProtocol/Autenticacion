@@ -8,6 +8,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Wallets } from '../../entities/wallets';
 import { CreateWalletDto, UpdateWalletDto } from './dto/wallets.dto';
+import { encryptPrivateKey } from 'src/common/utils';
 
 @Injectable()
 export class WalletsService {
@@ -15,12 +16,14 @@ export class WalletsService {
   constructor(
     @InjectRepository(Wallets)
     private readonly repo: Repository<Wallets>,
-  ) {}
+  ) { }
 
   async create(createDto: CreateWalletDto): Promise<Wallets> {
     this.logger.debug('llamando create');
     try {
-      const wallet = this.repo.create(createDto);
+      const payload = createDto;
+      payload.secret = encryptPrivateKey({ privateKey: createDto.secret })
+      const wallet = this.repo.create(payload);
       const savedWallet = await this.repo.save(wallet);
       return await this.findOne(savedWallet.id);
     } catch (error) {

@@ -17,8 +17,7 @@ import * as yaml from 'js-yaml';
 import { AppModule } from 'src/app.module';
 import { LogInterceptor } from 'src/common/interceptors/LogInterceptor.interceptor';
 import { AuthModule } from 'src/modules/auth/auth.module';
-import { ProsperModule } from 'src/modules/prosper/prosper.module';
-import { AlfredModule } from './modules/alfred/alfred.module';
+import { CMSModule } from 'src/modules/cms/cms.module';
 
 async function bootstrap() {
   const logLevels: LogLevel[] = process.env.DEBBUGER
@@ -53,14 +52,14 @@ async function bootstrap() {
 
   // Swagger principal: solo ProsperModule
   const externalOptions = new DocumentBuilder()
-    .setTitle('APIs Prosper - Stellar Protocol')
-    .setDescription('APIs Prosper - Stellar Protocol documentation')
+    .setTitle('APIs CMS Prosper - Stellar Protocol')
+    .setDescription('APIs CMS Prosper - Stellar Protocol documentation')
     .setVersion('2.0')
     .addBearerAuth()
     .build();
 
   const externalDoc = SwaggerModule.createDocument(app, externalOptions, {
-    include: [AuthModule, AlfredModule, ProsperModule],
+    include: [AuthModule, CMSModule],
   });
   const yamlDataInt = yaml.dump(externalDoc);
   fs.writeFileSync('./documentacion.yaml', yamlDataInt);
@@ -76,8 +75,8 @@ async function bootstrap() {
 
   // Swagger interno: todos los módulos
   const internalOptions = new DocumentBuilder()
-    .setTitle('APIs Prosper - Stellar Protocol Internal')
-    .setDescription('APIs Prosper - Stellar Protocol internal documentation')
+    .setTitle('APIs CMS Prosper - Stellar Protocol Internal')
+    .setDescription('APIs CMS Prosper - Stellar Protocol internal documentation')
     .setVersion('2.0')
     .addBearerAuth()
     .build();
@@ -91,23 +90,23 @@ async function bootstrap() {
     fs.writeFileSync('./prosper_stellar_protocol.yaml', yamlDataInt);
     Logger.debug(
       '✅ Archivo prosper_stellar_protocol.yaml ' +
-        'generado correctamente en la raíz del proyecto',
+      'generado correctamente en la raíz del proyecto',
     );
   }
 
   const configService = app.get(ConfigService);
-  const port = configService.get<number>('server.port') || 3000;
+  const port = configService.get<number>('server.port') || 4000;
 
   await app.listen(port);
 
   if (process.env.DEBBUGER) {
     Logger.debug(
       '🚀🚀 Application is running on: ' +
-        `http://localhost:${port}/${swaggerApi}`,
+      `http://localhost:${port}/${swaggerApi}`,
     );
     Logger.debug(
       '📘📘 Internal Swagger running on: ' +
-        `http://localhost:${port}/${swaggerApiInt}`,
+      `http://localhost:${port}/${swaggerApiInt}`,
     );
   } else {
     Logger.debug(`Application is running on::${port}`);

@@ -28,6 +28,8 @@ import {
   MakeProsperTransactionResponse,
   SubmitTxResponse,
 } from '../dto/stellar.dto';
+import { decryptPrivateKey, encryptPrivateKey } from '../utils';
+import { EncryptPrivateKeyDto } from '../dto/crypto.dto';
 
 @Injectable()
 export class StellarService {
@@ -78,45 +80,58 @@ export class StellarService {
     return new Asset('USDC', issuer);
   }
 
-  public getProsperAsset(isTestnet: boolean): Asset {
-    const issuer: string = isTestnet
-      ? this.stellarConfig.prosper_issuer_address
-      : this.stellarConfig.prosper_issuer_address_prod;
+  public getARSaAsset(): Asset {
+    const code: string = this.stellarConfig.arsa_issue_code;
+    const issuer: string = this.stellarConfig.arsa_issue_address;
 
-    if (!issuer) {
+    if (!issuer || !code) {
       throw new NotFoundException(
-        `PROSPER issuer address not defined for ${isTestnet ? 'testnet' : 'mainnet'}`,
+        `ARSa issuer address or code not defined for mainnet`,
       );
     }
-    return new Asset('PROSPER', Keypair.fromSecret(issuer).publicKey());
+    return new Asset(code, issuer);
   }
 
-  public getProsperIssuer(isTestnet: boolean): Keypair {
-    const issuer = isTestnet
+  public getProsperIssuer(isTestnet: boolean): { publicKey: string, secretKey: string } {
+    const issuerKey = isTestnet
       ? this.stellarConfig.prosper_issuer_address
       : this.stellarConfig.prosper_issuer_address_prod;
 
-    if (!issuer) {
+    const issuerSecretKey = isTestnet
+      ? this.stellarConfig.prosper_issuer_secret
+      : this.stellarConfig.prosper_issuer_secret_prod;
+
+    const issuerSecret = decryptPrivateKey(issuerSecretKey);
+
+    if (!issuerKey || !issuerSecret) {
       this.logger.warn(
-        `PROSPER issuer address not defined for ${isTestnet ? 'testnet' : 'mainnet'}`,
+        `PROSPER issuer address or secret not defined for ${isTestnet ? 'testnet' : 'mainnet'}`,
       );
       throw new BadRequestException();
     }
-    return Keypair.fromSecret(issuer);
+
+    return { publicKey: issuerKey, secretKey: issuerSecret };
   }
 
-  public getProsperTeasury(isTestnet: boolean): Keypair | null {
-    const treasury = isTestnet
+  public getProsperTeasury(isTestnet: boolean): { publicKey: string, secretKey: string } | null {
+    const treasuryKey = isTestnet
       ? this.stellarConfig.prosper_treasury_address
       : this.stellarConfig.prosper_treasury_address_prod;
 
-    if (!treasury) {
+    const treasurySecretEncrypted = isTestnet
+      ? this.stellarConfig.prosper_treasury_secret
+      : this.stellarConfig.prosper_treasury_secret_prod;
+
+    const treasurySecret = decryptPrivateKey(treasurySecretEncrypted);
+
+    if (!treasuryKey || !treasurySecret) {
       this.logger.warn(
-        `PROSPER treasury address not defined for ${isTestnet ? 'testnet' : 'mainnet'}`,
+        `PROSPER treasury address or secret not defined for ${isTestnet ? 'testnet' : 'mainnet'}`,
       );
       return null;
     }
-    return Keypair.fromSecret(treasury);
+    return { publicKey: treasuryKey, secretKey: treasurySecret };
+
   }
 
   public async createAccountWithBalance(
@@ -125,8 +140,9 @@ export class StellarService {
   ): Promise<SubmitTxResponse> {
     const netPass = this.getNetworkPassphrase(isTestnet);
     const server = this.getServer(isTestnet);
-    const source = Keypair.fromSecret(this.stellarConfig.xlm_wallet_secret);
-    const sourceAccount = await server.loadAccount(source.publicKey());
+    const secret = decryptPrivateKey(this.stellarConfig.xlm_wallet_secret)
+    const source = Keypair.fromSecret(secret);
+    const sourceAccount = await server.loadAccount(this.stellarConfig.xlm_wallet_public);
     const txn = new TransactionBuilder(sourceAccount, {
       fee: this.stellarConfig.base_fee,
     })
@@ -159,22 +175,32 @@ export class StellarService {
     }
   }
 
-  public async addUSDCTrustLine(
+  public async addIssuersTrustLine(
     keypair: Keypair,
     isTestnet: boolean,
   ): Promise<SubmitTxResponse> {
     const server = this.getServer(isTestnet);
     const account = await server.loadAccount(keypair.publicKey());
-    const asset = this.getUSDCAsset(isTestnet);
+    const assetUSDC = this.getUSDCAsset(isTestnet);
     const netPass = this.getNetworkPassphrase(isTestnet);
-    const txn = new TransactionBuilder(account, {
+
+    let txnBuilder = new TransactionBuilder(account, {
       fee: this.stellarConfig.base_fee,
-    })
-      .addOperation(
+    }).addOperation(
+      Operation.changeTrust({
+        asset: assetUSDC,
+      }),
+    );
+
+    if (!isTestnet) {
+      txnBuilder = txnBuilder.addOperation(
         Operation.changeTrust({
-          asset,
+          asset: this.getARSaAsset(),
         }),
-      )
+      );
+    }
+
+    const txn = txnBuilder
       .setNetworkPassphrase(netPass)
       .setTimeout(this.stellarConfig.timeout)
       .build();
@@ -190,7 +216,7 @@ export class StellarService {
       };
     } catch (error) {
       this.logger.error(
-        `Error addUSDCTrustLine failed, xdr: ${txn.toXDR()}, error: `,
+        `Error addIssuersTrustLine failed, xdr: ${txn.toXDR()}, error: `,
         error,
       );
       throw new BadRequestException('Error adding trustline to PROSPER');
@@ -255,7 +281,7 @@ export class StellarService {
     const keypair = Keypair.random();
     try {
       await this.createAccountWithBalance(keypair, isTestnet);
-      const response = await this.addUSDCTrustLine(keypair, isTestnet);
+      const response = await this.addIssuersTrustLine(keypair, isTestnet);
       return {
         publicKey: keypair.publicKey(),
         secretKey: keypair.secret(),
@@ -274,7 +300,7 @@ export class StellarService {
     try {
       await this.createAccountWithBalance(treasury, isTestnet);
       // Treasury must trust the issuer to receive PROSPER
-      await this.addUSDCTrustLine(treasury, isTestnet);
+      await this.addIssuersTrustLine(treasury, isTestnet);
       return {
         publicKey: treasury.publicKey(),
         secretKey: treasury.secret(),
@@ -330,59 +356,96 @@ export class StellarService {
   ): Promise<GetAccountBalancesResponse> {
     try {
       const { address, isTestnet } = payload;
-      this.logger.debug(`address: ${address}, isTestnet: ${isTestnet}`);
-      const server = this.getServer(isTestnet);
-      this.logger.debug(`server: ${JSON.stringify(server)}`);
-      const account = await server.loadAccount(address);
-      this.logger.debug(`account: ${JSON.stringify(account)}`);
+
+      const networkType = isTestnet ? 'testnet' : 'public';
+      const url = `https://api.stellar.expert/explorer/${networkType}/account/${address}/value`;
+
+      const response = await fetch(url);
+      if (response.status === 404) {
+        const err: any = new Error('Not found');
+        err.response = { status: 404 };
+        throw err;
+      }
+      if (!response.ok) {
+        throw new Error(`Stellar expert error: ${response.statusText}`);
+      }
+
+      const accountData = await response.json();
+
+      const arsaIssuer: string = this.stellarConfig.arsa_issue_address;
+
+      if (!arsaIssuer) {
+        throw new NotFoundException(
+          `ARSa issuer address or code not defined for mainnet`,
+        );
+      }
 
       let balanceXLM = '0';
       let balanceUSDC = '0';
+      let balanceARSA = '0';
+      let balanceUSDCprosper = '0';
 
       const usdcIssuer = isTestnet
         ? this.stellarConfig.usdc_issuer_address
         : this.stellarConfig.usdc_issuer_address_prod;
-      this.logger.debug(`usdcIssuer: ${JSON.stringify(usdcIssuer)}`);
-      const usdcPublicKey = usdcIssuer;
-      this.logger.debug(`usdcPublicKey: ${JSON.stringify(usdcPublicKey)}`);
-      for (const b of account.balances) {
-        if (b.asset_type === 'native') {
-          balanceXLM = b.balance;
-        } else {
-          const assetCode = (b as any).asset_code;
-          const assetIssuer = (b as any).asset_issuer;
-          if (assetCode === 'USDC' && assetIssuer === usdcPublicKey) {
-            balanceUSDC = b.balance;
+
+      const usdcProsperAssetString = 'CD2NVPKBQK3J42JABNAN3WRQITQMBH4TH2MNIEVAIMJEQ2HRJBVMVVWY';
+
+      for (const b of accountData.balances || []) {
+        if (b.asset === 'XLM') {
+          balanceXLM = (Math.round(b.balance / 100000) / 100).toString();
+        } else if (b.asset === usdcProsperAssetString) {
+          balanceUSDCprosper = (Math.round(b.balance / 100000) / 100).toString();
+        } else if (typeof b.asset === 'string') {
+          if (b.asset.startsWith(`USDC-${usdcIssuer}-`)) {
+            balanceUSDC = (Math.round(b.balance / 100000) / 100).toString();
+          } else if (b.asset.startsWith(`ARSa-${arsaIssuer}-`)) {
+            balanceARSA = (Math.round(b.balance / 100000) / 100).toString();
           }
         }
       }
 
-      return { address, balanceXLM, balanceUSDC };
+      return { address, balanceXLM, balanceUSDC, balanceARSA, balanceUSDCprosper };
     } catch (error: any) {
       if (error?.response?.status === 404) {
-        this.logger.warn(`Account ${payload.address} not found (unfunded). Returning 0 balances.`);
-        return { address: payload.address, balanceXLM: '0', balanceUSDC: '0' };
+        this.logger.warn(
+          `Account ${payload.address} not found (unfunded). Returning 0 balances.`,
+        );
+        return {
+          address: payload.address,
+          balanceXLM: '0',
+          balanceUSDC: '0',
+          balanceARSA: '0',
+          balanceUSDCprosper: '0',
+        };
       }
       this.logger.error(`Error fetching account balances, error: `, error);
       throw new BadRequestException('Error fetching account balances');
     }
   }
 
-  public async makeUSDCTransaction(
+  public async makeTransaction(
     payload: MakeProsperTransactionDto,
   ): Promise<MakeProsperTransactionResponse> {
     try {
-      const { sourcePrivateKey, receiverPublicKey, amount, isTestnet, memo } =
+      const { sourcePublicKey, sourcePrivateKey, receiverPublicKey, amount, isTestnet, memo } =
         payload;
       const server = this.getServer(isTestnet);
-      const asset = this.getUSDCAsset(isTestnet);
+      const asset =
+        payload.asset === 'USDC'
+          ? this.getUSDCAsset(isTestnet)
+          : this.getARSaAsset();
       const memoText = memo || ' ';
+
+      if (payload.asset === 'ARSa' && !!isTestnet) {
+        throw new BadRequestException('ARSa can only be transferred on mainet');
+      }
 
       // verify receiver has PROSPER trustline
       // await this.verifyAccountProsper(receiverPublicKey, isTestnet);
 
+      const sourceAccount = await server.loadAccount(sourcePublicKey);
       const sourceKeys = Keypair.fromSecret(sourcePrivateKey);
-      const sourceAccount = await server.loadAccount(sourceKeys.publicKey());
 
       const txn = new TransactionBuilder(sourceAccount, {
         fee: this.stellarConfig.base_fee,
@@ -410,6 +473,82 @@ export class StellarService {
     } catch (error) {
       this.logger.error(`Error making Prosper transaction, error: `, error);
       throw new BadRequestException('Error making Prosper transaction');
+    }
+  }
+
+  /**
+   * Obtiene el hash y monto del último pago válido en USDC o ARSa.
+   * @param publicKey Dirección pública de Stellar a consultar.
+   */
+  async getLastAssetPayment(publicKey: string) {
+    try {
+      const server = this.getServer(false);
+      const accountInfo = await server.loadAccount(publicKey);
+      if (!accountInfo.balances || accountInfo.balances.length === 0) {
+        throw new BadRequestException('La cuenta no tiene balances activos.');
+      }
+      const hasBalance = accountInfo.balances.some(b => parseFloat(b.balance) > 0);
+      if (!hasBalance) {
+        throw new BadRequestException('La cuenta tiene un balance igual a 0.');
+      }
+      const paymentsResponse = await server
+        .payments()
+        .forAccount(publicKey)
+        .order('desc')
+        .limit(50)
+        .call();
+
+      const usdcAsset = this.getUSDCAsset(false);
+      const arsaAsset = this.getARSaAsset();
+
+      for (const payment of paymentsResponse.records) {
+        if ('asset_code' in payment) {
+          const assetCode = payment.asset_code;
+          const assetIssuer = payment.asset_issuer;
+
+          const isOfficialUSDC = assetCode === usdcAsset.code && assetIssuer === usdcAsset.issuer;
+          const isOfficialARSa = assetCode === arsaAsset.code && assetIssuer === arsaAsset.issuer;
+
+          if (isOfficialUSDC || isOfficialARSa) {
+            return {
+              success: true,
+              message: `Último pago verificado encontrado en ${assetCode}`,
+              data: {
+                hash: payment.transaction_hash,
+                amount: payment.amount,
+                asset: assetCode,
+                issuer: assetIssuer,
+                type: payment.type,
+                from: payment.from,
+                to: payment.to,
+                createdAt: payment.created_at,
+              },
+            };
+          }
+        }
+      }
+      return {
+        success: false,
+        message: 'No se encontraron pagos recientes que coincidan con los emisores oficiales de USDC o ARSa.',
+      };
+
+    } catch (error: any) {
+      this.logger.error(`Error procesando la cuenta de Stellar: ${error.message}`);
+      throw error;
+    }
+  }
+
+  async encryptStellarPrivateKey(payload: EncryptPrivateKeyDto): Promise<string> {
+    try {
+      const { privateKey } = payload;
+      if (!privateKey || !Keypair.fromSecret(privateKey).publicKey()) {
+        throw new BadRequestException('Invalid private key');
+      }
+      const encryptedPrivateKey = encryptPrivateKey({ privateKey });
+      return encryptedPrivateKey;
+    } catch (error) {
+      this.logger.error(`Error encrypting private key, error: `, error);
+      throw new BadRequestException('Error encrypting private key');
     }
   }
 }

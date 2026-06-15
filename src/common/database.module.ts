@@ -8,7 +8,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => {
-        const dbConfig = configService.get('config')
+        const dbConfig = configService.get('config');
         return {
           type: 'postgres',
           url: dbConfig.database_url,
@@ -22,4 +22,4 @@ import { TypeOrmModule } from '@nestjs/typeorm';
     }),
   ],
 })
-export class DatabaseModule {}
+export class DatabaseModule { }

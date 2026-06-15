@@ -14,36 +14,39 @@ export enum roleUser {
 @Entity()
 export class Auth {
   @PrimaryGeneratedColumn()
-  id: number;
+  id!: number;
 
   @Column({ type: 'varchar' })
-  username: string;
+  username!: string;
 
   @Column({ type: 'varchar' })
-  password: string;
+  password!: string;
+
+  @Column({ type: 'varchar', nullable: true })
+  business?: string;
 
   @Column({
     type: 'enum',
     enum: roleUser,
     default: roleUser.user,
   })
-  role: roleUser;
+  role!: roleUser;
 
   @CreateDateColumn({
     type: 'timestamptz',
     default: () => 'CURRENT_TIMESTAMP',
   })
-  createdAt: Date;
+  createdAt!: Date;
 
   @UpdateDateColumn({
     type: 'timestamptz',
     default: () => 'CURRENT_TIMESTAMP',
   })
-  updatedAt: Date;
+  updatedAt!: Date;
 
   @DeleteDateColumn({
     type: 'timestamptz',
     default: null,
   })
-  deletedAt: Date;
+  deletedAt!: Date;
 }

@@ -18,37 +18,40 @@ export enum WalletStatus {
 }
 
 export class Balances {
-  asset: string;
-  balance: number;
-  updatedAt: Date;
+  asset!: string;
+  balance!: number;
+  updatedAt!: Date;
 }
 
 @Entity()
 export class Wallets {
   @PrimaryGeneratedColumn()
-  id: number;
+  id!: number;
 
   @Column({ type: 'varchar' })
-  prosperId: string;
+  prosperId!: string;
+
+  @Column({ type: 'varchar', nullable: true })
+  prosperType?: string;
+
+  @Column({ type: 'varchar', nullable: true })
+  cashin?: string;
 
   @Column({ type: 'varchar' })
-  cashin: string;
+  address!: string;
 
   @Column({ type: 'varchar' })
-  address: string;
-
-  @Column({ type: 'varchar' })
-  secret: string;
+  secret!: string;
 
   @Column('jsonb', { array: true, nullable: true })
-  balances: Balances[];
+  balances?: Balances[];
 
   @Column({
     type: 'enum',
     enum: WalletStatus,
     default: WalletStatus.active,
   })
-  status: WalletStatus;
+  status!: WalletStatus;
 
   @OneToMany(() => Transacciones, (t) => t.walletFrom)
   transactionsFrom?: Transacciones[];
@@ -60,17 +63,17 @@ export class Wallets {
     type: 'timestamptz',
     default: () => 'CURRENT_TIMESTAMP',
   })
-  createdAt: Date;
+  createdAt!: Date;
 
   @UpdateDateColumn({
     type: 'timestamptz',
     default: () => 'CURRENT_TIMESTAMP',
   })
-  updatedAt: Date;
+  updatedAt!: Date;
 
   @DeleteDateColumn({
     type: 'timestamptz',
     default: null,
   })
-  deletedAt: Date;
+  deletedAt!: Date;
 }
